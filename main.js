@@ -54,9 +54,10 @@ function createWindow() {
   ]);
 
   mainWindow = new BrowserWindow({
-    width: 420, // Um pouco mais largo para o QR Code
-    height: 600,
+    width: 450, // Aumentado levemente para o QR Code respirar
+    height: 700, // Aumentado para acomodar a tela de admin com scroll se necessário
     show: false,
+    alwaysOnTop: true, // Dica de UX: Tally no PC geralmente fica sobre o vMix/OBS
     icon: path.join(__dirname, "icon.png"),
     webPreferences: {
       nodeIntegration: true,
@@ -64,18 +65,35 @@ function createWindow() {
     },
   });
 
+  // Listener para o backend avisar que subiu o servidor
   backendProcess.on("message", (msg) => {
     if (msg.type === "SERVER_READY") {
+      const serverUrl = `http://localhost:${msg.port}`;
       console.log(`Conectando Electron na porta: ${msg.port}`);
-      mainWindow.loadURL(`http://localhost:${msg.port}`);
+
+      // Carrega a URL e só mostra a janela quando o React estiver pronto
+      mainWindow.loadURL(serverUrl);
+      mainWindow.once("ready-to-show", () => {
+        mainWindow.show();
+      });
     }
   });
 
   const isDev = !app.isPackaged;
   if (isDev) {
     mainWindow.loadURL("http://localhost:3001");
-    mainWindow.webContents.openDevTools(); // Útil para QA em dev
+    // mainWindow.webContents.openDevTools(); // Você decide se deixa aberto
   }
+
+  // --- TRATAMENTO PARA REACT ROUTER ---
+  // Se o usuário atualizar a página em uma rota como /admin, o Electron
+  // precisa redirecionar para o index.html para o Router reassumir.
+  mainWindow.webContents.on("did-fail-load", () => {
+    if (!isDev) {
+      console.log("Falha no load, recuperando rota principal...");
+      // Aqui você poderia forçar o reload da porta do backend se necessário
+    }
+  });
 
   mainWindow.on("close", (event) => {
     if (!app.isQuitting) {

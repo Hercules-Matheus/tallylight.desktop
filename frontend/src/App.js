@@ -1,60 +1,44 @@
 import "./App.css";
 import React, { useEffect, useState, useRef } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Link,
+  useNavigate,
+} from "react-router-dom";
 import io from "socket.io-client";
 import NoSleep from "nosleep.js";
 import { QRCodeCanvas } from "qrcode.react";
+import { VERSION } from "./version";
 
-// 1. Descobre em qual porta o navegador abriu o site
+// Configuração do Socket
 const currentPort = window.location.port;
-
-// 2. Se não houver porta (ex: rodando via file://) ou se for 3001 (React Dev),
-// usamos a 58000 como fallback. Caso contrário, usamos a porta atual da URL.
 const SOCKET_PORT =
   currentPort === "3001" || !currentPort ? "58000" : currentPort;
-
 const SOCKET_SERVER = `http://${window.location.hostname}:${SOCKET_PORT}`;
-
-// 3. Inicializa o socket
-const socket = io(SOCKET_SERVER, {
-  transports: ["websocket"],
-  reconnectionAttempts: 5,
-  timeout: 10000,
-});
+const socket = io(SOCKET_SERVER, { transports: ["websocket"] });
 
 function App() {
-  // Estados do Tally (Cinegrafista)
   const [programCam, setProgramCam] = useState(null);
-  const [myCam, setMyCam] = useState(1);
-  const [connected, setConnected] = useState(false);
-  const noSleep = useRef(new NoSleep());
   const [serverIp, setServerIp] = useState("");
-
-  // Estados de Configuração (Admin)
-  const [isAdmin, setIsAdmin] = useState(false); // Alterna entre Telas
+  const [serverPort, setServerPort] = useState(58000);
   const [atemIp, setAtemIp] = useState("");
-  const [atemStatus, setAtemStatus] = useState("Desconhecido");
-  const [serverPort, setServerPort] = useState(58000); // Porta base
+  const [atemStatus, setAtemStatus] = useState(false);
 
   useEffect(() => {
-    socket.on("connect", () => setConnected(true));
-    socket.on("disconnect", () => setConnected(false));
-
     socket.on("tallyUpdate", (data) => setProgramCam(data.program));
-
-    // Escuta o IP vindo do backend
     socket.on("current-ip", (ip) => setAtemIp(ip));
+    socket.on("server-ip", (ip) => setServerIp(ip));
+    socket.on("server-port", (port) => setServerPort(port));
 
-    // Escuta o status real do ATEM
+    // VALIDAÇÃO REAL: O backend envia o status real do hardware
     socket.on("status-atem", (data) => {
-      setAtemStatus(data.connected ? "Conectado ✅" : "Erro na Conexão ❌");
-    });
-
-    socket.on("server-ip", (ip) => {
-      setServerIp(ip);
-    });
-
-    socket.on("server-port", (port) => {
-      setServerPort(port);
+      if (data.connected === true) {
+        setAtemStatus(true);
+      } else {
+        setAtemStatus(false);
+      }
     });
 
     return () => {
@@ -62,90 +46,44 @@ function App() {
       socket.off("disconnect");
       socket.off("tallyUpdate");
       socket.off("current-ip");
-      socket.off("status-atem");
       socket.off("server-ip");
       socket.off("server-port");
+      socket.off("status-atem");
     };
   }, []);
 
-  const handleSaveIp = () => {
-    // Validação básica de formato de IP (0.0.0.0 até 255.255.255.255)
-    const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+  return (
+    <Router>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <TallyScreen programCam={programCam} atemStatus={atemStatus} />
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <AdminScreen
+              atemIp={atemIp}
+              setAtemIp={setAtemIp}
+              atemStatus={atemStatus}
+              serverIp={serverIp}
+              serverPort={serverPort}
+            />
+          }
+        />
+      </Routes>
+    </Router>
+  );
+}
 
-    if (ipRegex.test(atemIp) && atemIp) {
-      socket.emit("update-atem-ip", atemIp);
-      alert("IP enviado com sucesso!");
-    } else {
-      alert("Por favor, digite um endereço IP válido (ex: 192.168.1.240)");
-    }
-  };
-
-  const handleEnableNoSleep = () => {
-    noSleep.current.enable();
-    alert("Modo Tally Ativado: A tela não irá apagar.");
-  };
-
+// --- TELA DO CINEGRAFISTA ---
+const TallyScreen = ({ programCam, atemStatus }) => {
+  const [myCam, setMyCam] = useState(1);
+  const noSleep = useRef(new NoSleep());
   const isOnAir = programCam === parseInt(myCam);
 
-  // --- TELA DE CONFIGURAÇÃO (ADMIN) ---
-  if (isAdmin) {
-    return (
-      <div style={styles.containerAdmin}>
-        <h2>⚙️ CONFIGURAÇÃO ATEM</h2>
-        <div style={styles.card}>
-          <p>Status: {atemStatus}</p>
-          <input
-            type="text"
-            value={atemIp}
-            placeholder="IP do ATEM (Ex: 192.168.1.240)"
-            onChange={(e) => setAtemIp(e.target.value)}
-            style={styles.input}
-          />
-          <button onClick={handleSaveIp} style={styles.btnSave}>
-            Atualizar IP
-          </button>
-        </div>
-        <div style={styles.accessBox}>
-          <p style={{ fontSize: "0.8rem", color: "#aaa", marginBottom: "5px" }}>
-            ACESSO PARA CINEGRAFISTAS:
-          </p>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-            }}
-          >
-            <QRCodeCanvas
-              value={`http://${serverIp}:${serverPort}`}
-              size={128}
-              bgColor={"#000"}
-              fgColor={"#4fc3f7"}
-              level={"L"}
-              style={{
-                marginBottom: "10px",
-                border: "5px solid #fff",
-                borderRadius: "4px",
-              }}
-            />
-            <code style={styles.linkCode}>
-              http://{serverIp}:{serverPort}
-            </code>
-          </div>
-          <p
-            style={{ fontSize: "0.7rem", marginTop: "10px", color: "#ff9800" }}
-          >
-            ⚠️ Certifique-se de que o celular está no mesmo Wi-Fi.
-          </p>
-        </div>
-        <button onClick={() => setIsAdmin(false)} style={styles.btnBack}>
-          Voltar para Tally
-        </button>
-      </div>
-    );
-  }
-
-  // --- TELA DO CINEGRAFISTA (TALLY) ---
   return (
     <div
       style={{
@@ -154,10 +92,12 @@ function App() {
       }}
     >
       <div style={styles.header}>
-        <h2 style={{ opacity: 0.6, margin: 0 }}>CINEGRAFISTA</h2>
-        <button onClick={() => setIsAdmin(true)} style={styles.btnSettings}>
+        <h2 style={{ opacity: 0.6, margin: 0, fontSize: "1rem" }}>
+          CINEGRAFISTA
+        </h2>
+        <Link to="/admin" style={styles.btnSettings}>
           ⚙️
-        </button>
+        </Link>
       </div>
 
       <select
@@ -172,34 +112,138 @@ function App() {
         ))}
       </select>
 
-      <h1 style={{ fontSize: "5rem", margin: "10px 0" }}>
-        {isOnAir ? "ON AIR" : "OFF AIR"}
-      </h1>
+      <h1 style={{ fontSize: "5rem" }}>{isOnAir ? "ON AIR" : "OFF AIR"}</h1>
 
-      <button onClick={handleEnableNoSleep} style={styles.btnNoSleep}>
+      <button
+        onClick={() => {
+          noSleep.current.enable();
+          alert("Tela Bloqueada!");
+        }}
+        style={styles.btnNoSleep}
+      >
         Manter Tela Ligada
       </button>
 
       <footer style={styles.footer}>
-        Status: {connected ? "Conectado ao Server" : "Desconectado"} | IP:{" "}
-        {window.location.hostname}
+        Status: {atemStatus ? "Conectado" : "Desconectado"} | v{VERSION}
       </footer>
     </div>
   );
-}
+};
 
-// Estilos básicos para manter tudo organizado
+// --- TELA ADMIN ---
+const AdminScreen = ({
+  atemIp,
+  setAtemIp,
+  atemStatus,
+  serverIp,
+  serverPort,
+}) => {
+  const [localIp, setLocalIp] = useState(atemIp);
+  const [isUpdating, setIsUpdating] = useState(false); // Trava de UI
+  const isTyping = useRef(false);
+
+  // Sincroniza o campo apenas quando a prop mudar e o usuário NÃO estiver digitando
+  useEffect(() => {
+    if (!isTyping.current) {
+      setLocalIp(atemIp);
+      setIsUpdating(false); // Libera o input quando o IP atualizado chegar do servidor
+    }
+  }, [atemIp]);
+
+  const handleSaveIp = () => {
+    if (!localIp) return alert("Digite um IP válido!");
+
+    setIsUpdating(true); // Bloqueia o formulário
+    setAtemIp(localIp);
+    socket.emit("update-atem-ip", localIp);
+
+    // Timeout de segurança: libera após 5s se o backend não responder
+    setTimeout(() => setIsUpdating(false), 5000);
+  };
+
+  const handleReset = () => {
+    setLocalIp(atemIp);
+    isTyping.current = false;
+    setIsUpdating(false);
+  };
+
+  return (
+    <div style={styles.containerAdmin}>
+      <h2>⚙️ CONFIGURAÇÃO</h2>
+      <div style={{ ...styles.card, opacity: isUpdating ? 0.7 : 1 }}>
+        <p
+          style={{
+            fontWeight: "bold",
+            color: isUpdating ? "#ff9800" : atemStatus ? "#4caf50" : "#f44336",
+          }}
+        >
+          {isUpdating
+            ? "🔄 RECONECTANDO..."
+            : atemStatus
+              ? "CONECTADO ✅"
+              : "DESCONECTADO ❌"}
+        </p>
+
+        <input
+          style={{
+            ...styles.input,
+            cursor: isUpdating ? "not-allowed" : "text",
+          }}
+          value={localIp}
+          disabled={isUpdating} // Impede interação durante o "lag"
+          onFocus={() => (isTyping.current = true)}
+          onBlur={() => (isTyping.current = false)}
+          onChange={(e) => setLocalIp(e.target.value)}
+          placeholder="IP do ATEM (ex: 127.0.0.1)"
+        />
+
+        <div style={{ display: "flex", gap: "10px" }}>
+          <button
+            onClick={handleSaveIp}
+            disabled={isUpdating}
+            style={{
+              ...styles.btnSave,
+              backgroundColor: isUpdating ? "#666" : "#2e7d32",
+              flex: 2,
+            }}
+          >
+            {isUpdating ? "Aguarde..." : "Atualizar IP"}
+          </button>
+
+          <button
+            onClick={handleReset}
+            style={{ ...styles.btnSave, backgroundColor: "#555", flex: 1 }}
+          >
+            Reset
+          </button>
+        </div>
+      </div>
+
+      <div style={styles.accessBox}>
+        <QRCodeCanvas value={`http://${serverIp}:${serverPort}`} size={128} />
+        <code style={styles.linkCode}>
+          http://{serverIp}:{serverPort}
+        </code>
+      </div>
+
+      <Link to="/" style={styles.btnBack}>
+        Voltar ao Tally
+      </Link>
+    </div>
+  );
+};
+
 const styles = {
   containerTally: {
     height: "100vh",
+    width: "100vw",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
     color: "white",
-    transition: "background-color 0.3s ease",
-    fontFamily: "sans-serif",
-    textAlign: "center",
+    position: "relative",
   },
   containerAdmin: {
     height: "100vh",
@@ -209,35 +253,32 @@ const styles = {
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    fontFamily: "sans-serif",
   },
   header: {
     position: "absolute",
-    top: 20,
-    width: "90%",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "60px",
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
+    padding: "0 20px",
+    boxSizing: "border-box",
+    zIndex: 999,
   },
+  btnSettings: { textDecoration: "none", fontSize: "2rem" },
   card: {
-    backgroundColor: "#333",
+    background: "#333",
     padding: "20px",
     borderRadius: "10px",
-    width: "80%",
-    maxWidth: "300px",
+    width: "300px",
   },
   input: {
     width: "100%",
     padding: "10px",
-    margin: "10px 0",
+    marginBottom: "10px",
     boxSizing: "border-box",
-    fontSize: "1rem",
-  },
-  select: {
-    fontSize: "1.5rem",
-    padding: "10px",
-    margin: "20px 0",
-    borderRadius: "5px",
   },
   btnSave: {
     width: "100%",
@@ -245,53 +286,25 @@ const styles = {
     backgroundColor: "#2e7d32",
     color: "white",
     border: "none",
-    borderRadius: "5px",
-    cursor: "pointer",
-    fontWeight: "bold",
-  },
-  btnBack: {
-    marginTop: "20px",
-    background: "none",
-    border: "1px solid white",
-    color: "white",
-    padding: "10px 20px",
-    borderRadius: "5px",
-    cursor: "pointer",
-  },
-  btnSettings: {
-    background: "none",
-    border: "none",
-    fontSize: "1.5rem",
-    cursor: "pointer",
-  },
-  btnNoSleep: {
-    marginTop: "30px",
-    padding: "15px 25px",
-    borderRadius: "50px",
-    border: "none",
-    backgroundColor: "rgba(255,255,255,0.1)",
-    color: "white",
-    fontWeight: "bold",
-  },
-  footer: {
-    position: "absolute",
-    bottom: 20,
-    fontSize: "0.8rem",
-    opacity: 0.5,
   },
   accessBox: {
     marginTop: "20px",
+    textAlign: "center",
+    background: "white",
     padding: "15px",
-    backgroundColor: "#000",
-    borderRadius: "8px",
-    border: "1px dashed #444",
+    borderRadius: "10px",
+    color: "black",
   },
   linkCode: {
-    fontSize: "1.2rem",
-    color: "#4fc3f7",
+    display: "block",
+    marginTop: "10px",
     fontWeight: "bold",
-    letterSpacing: "1px",
+    fontSize: "0.8rem",
   },
+  btnBack: { color: "white", marginTop: "20px", textDecoration: "underline" },
+  select: { fontSize: "1.5rem", padding: "10px" },
+  btnNoSleep: { marginTop: "20px", padding: "10px 20px" },
+  footer: { position: "absolute", bottom: 20, opacity: 0.5 },
 };
 
 export default App;

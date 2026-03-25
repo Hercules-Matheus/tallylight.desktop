@@ -1,19 +1,20 @@
 {
   "name": "tally-desktop",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Sistema de Tally para ATEM Blackmagic",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build-frontend": "cd frontend && npm run build",
-    "pre-dist": "npm run build-frontend",
-    "clean": "rimraf dist",
-    "dist": "npm run clean && electron-builder",
-    "release": "npm run pre-dist && npm run dist"
+    "clean": "rimraf dist frontend/build",
+    "sync-version": "node -e \"const fs = require('fs'); const pkg = require('./package.json'); const content = 'module.exports = { VERSION: \\'' + pkg.version + '\\' };'; fs.writeFileSync('./frontend/src/version.js', content); console.log('✅ version.js sincronizado: v' + pkg.version);\"",
+    "build-front": "npm run sync-version && cd frontend && npm run build",
+    "build-app": "electron-builder",
+    "release": "npm run clean && npm run build-front && npm run build-app",
+    "postrelease": "echo ✅ Build finalizado com sucesso! Verifique a pasta /dist"
   },
   "build": {
     "appId": "com.vvp.tally",
-    "productName": "TallyControl",
+    "productName": "TallyControl -",
     "directories": {
       "output": "dist"
     },
