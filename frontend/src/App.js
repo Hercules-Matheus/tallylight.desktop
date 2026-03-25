@@ -25,12 +25,16 @@ function App() {
   const [serverPort, setServerPort] = useState(58000);
   const [atemIp, setAtemIp] = useState("");
   const [atemStatus, setAtemStatus] = useState(false);
+  const [availableInputs, setAvailableInputs] = useState([]);
 
   useEffect(() => {
     socket.on("tallyUpdate", (data) => setProgramCam(data.program));
     socket.on("current-ip", (ip) => setAtemIp(ip));
     socket.on("server-ip", (ip) => setServerIp(ip));
     socket.on("server-port", (port) => setServerPort(port));
+    socket.on("available-inputs", (inputs) => {
+      setAvailableInputs(inputs);
+    });
 
     // VALIDAÇÃO REAL: O backend envia o status real do hardware
     socket.on("status-atem", (data) => {
@@ -49,6 +53,8 @@ function App() {
       socket.off("server-ip");
       socket.off("server-port");
       socket.off("status-atem");
+      socket.off("available-inputs");
+      socket.off("status-atem");
     };
   }, []);
 
@@ -58,7 +64,11 @@ function App() {
         <Route
           path="/"
           element={
-            <TallyScreen programCam={programCam} atemStatus={atemStatus} />
+            <TallyScreen
+              programCam={programCam}
+              atemStatus={atemStatus}
+              availableInputs={availableInputs}
+            />
           }
         />
         <Route
@@ -79,7 +89,7 @@ function App() {
 }
 
 // --- TELA DO CINEGRAFISTA ---
-const TallyScreen = ({ programCam, atemStatus }) => {
+const TallyScreen = ({ programCam, atemStatus, availableInputs }) => {
   const [myCam, setMyCam] = useState(1);
   const noSleep = useRef(new NoSleep());
   const isOnAir = programCam === parseInt(myCam);
@@ -105,11 +115,15 @@ const TallyScreen = ({ programCam, atemStatus }) => {
         onChange={(e) => setMyCam(e.target.value)}
         style={styles.select}
       >
-        {[1, 2, 3, 4].map((n) => (
-          <option key={n} value={n}>
-            Câmera {n}
-          </option>
-        ))}
+        {availableInputs.length > 0 ? (
+          availableInputs.map((input) => (
+            <option key={input.id} value={input.id}>
+              {input.label}
+            </option>
+          ))
+        ) : (
+          <option value="">Buscando câmeras...</option>
+        )}
       </select>
 
       <h1 style={{ fontSize: "5rem" }}>{isOnAir ? "ON AIR" : "OFF AIR"}</h1>

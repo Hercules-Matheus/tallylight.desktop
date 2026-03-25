@@ -59,6 +59,16 @@ function getLocalIp() {
 myAtem.on("connected", () => {
   console.log("✅ Conectado ao ATEM!");
   io.emit("status-atem", { connected: true, ip: getSavedIp() });
+
+  if (myAtem.state && myAtem.state.inputs) {
+    const inputsMap = Object.values(myAtem.state.inputs)
+      .filter((input) => input.internalPortType === 0)
+      .map((input) => ({
+        id: input.inputId,
+        label: input.longName || `Câmera ${input.inputId}`,
+      }));
+    io.emit("available-inputs", inputsMap);
+  }
 });
 
 myAtem.on("disconnected", () => {
@@ -78,6 +88,18 @@ myAtem.on("stateChanged", (state) => {
       lastTally = newTally;
       io.emit("tallyUpdate", newTally);
     }
+  }
+
+  if (state.inputs) {
+    const inputsMap = Object.values(state.inputs)
+      .filter((input) => input.internalPortType === 0) // Pega apenas entradas físicas
+      .map((input) => ({
+        id: input.inputId,
+        label: input.longName || `Câmera ${input.inputId}`,
+      }));
+
+    console.log("Enviando lista de câmeras atualizada...");
+    io.emit("available-inputs", inputsMap);
   }
 });
 

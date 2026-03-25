@@ -14,7 +14,7 @@
   },
   "build": {
     "appId": "com.vvp.tally",
-    "productName": "TallyControl -",
+    "productName": "TallyControl",
     "directories": {
       "output": "dist"
     },
@@ -23,7 +23,13 @@
       "icon": "icon.png"
     },
     "files": [
-      "**/*",
+      "main.js",
+      "icon.png",
+      "backend/**/*",
+      "frontend/build/**/*",
+      "node_modules/**/*",
+      "!node_modules/electron",
+      "!node_modules/electron-builder",
       "!frontend/src",
       "!frontend/public",
       "!frontend/node_modules",
