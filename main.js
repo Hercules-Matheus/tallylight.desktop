@@ -46,22 +46,35 @@ function createTray() {
 }
 
 function createWindow() {
-  backendProcess = fork(path.join(__dirname, "backend", "index.js"));
+  const userDataPath = app.getPath("userData");
+  const configPath = path.join(userDataPath, "config.json");
+
+  backendProcess = fork(path.join(__dirname, "backend", "index.js"), [
+    configPath,
+  ]);
 
   mainWindow = new BrowserWindow({
-    width: 400,
-    height: 500,
+    width: 420, // Um pouco mais largo para o QR Code
+    height: 600,
     show: false,
-    webPreferences: { nodeIntegration: true, contextIsolation: false },
+    icon: path.join(__dirname, "icon.png"),
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+    },
+  });
+
+  backendProcess.on("message", (msg) => {
+    if (msg.type === "SERVER_READY") {
+      console.log(`Conectando Electron na porta: ${msg.port}`);
+      mainWindow.loadURL(`http://localhost:${msg.port}`);
+    }
   });
 
   const isDev = !app.isPackaged;
-
   if (isDev) {
     mainWindow.loadURL("http://localhost:3001");
-  } else {
-    // Quando estiver no .exe, ele lê a pasta build
-    mainWindow.loadFile(path.join(__dirname, "frontend/build/index.html"));
+    mainWindow.webContents.openDevTools(); // Útil para QA em dev
   }
 
   mainWindow.on("close", (event) => {
