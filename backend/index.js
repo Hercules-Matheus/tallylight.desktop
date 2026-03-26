@@ -15,157 +15,138 @@ const DEFAULT_PORT = 58000;
 const packageInfo = require("../package.json");
 const VERSION = packageInfo.version;
 
-// Configuração de caminhos
+// --- CONFIGURAÇÃO E CAMINHOS ---
 const configPath = process.argv[2] || path.join(__dirname, "config.json");
 if (!fs.existsSync(configPath)) {
-  fs.writeFileSync(configPath, JSON.stringify({ atemIp: "127.0.0.1" }));
+  fs.writeFileSync(configPath, JSON.stringify({ atemIp: "192.168.10.240" }));
 }
 
 const io = new Server(server, { cors: { origin: "*" } });
 
 // --- FUNÇÕES AUXILIARES ---
-function findAvailablePort(startPort) {
-  return new Promise((resolve, reject) => {
-    const s = net.createServer();
-    s.once("error", (err) => {
-      if (err.code === "EADDRINUSE") resolve(findAvailablePort(startPort + 1));
-      else reject(err);
-    });
-    s.once("listening", () => s.close(() => resolve(startPort)));
-    s.listen(startPort, "0.0.0.0"); // 0.0.0.0 para aceitar conexões da rede
-  });
-}
-
 function getSavedIp() {
   try {
-    const data = fs.readFileSync(configPath);
-    return JSON.parse(data).atemIp;
+    return JSON.parse(fs.readFileSync(configPath)).atemIp;
   } catch (err) {
     return "127.0.0.1";
   }
 }
 
-function getLocalIp() {
+function getAllIps() {
   const interfaces = os.networkInterfaces();
+  const foundIps = [];
   for (const name of Object.keys(interfaces)) {
     for (const iface of interfaces[name]) {
-      if (iface.family === "IPv4" && !iface.internal) return iface.address;
+      if (iface.family === "IPv4" && !iface.internal) {
+        foundIps.push({
+          name: name,
+          address: iface.address,
+          isTailscale:
+            name.toLowerCase().includes("tailscale") ||
+            iface.address.startsWith("100."),
+        });
+      }
     }
   }
-  return "localhost";
+  return foundIps;
+}
+
+function getLocalIp() {
+  const ips = getAllIps();
+  const realLocal = ips.find(
+    (ip) =>
+      !ip.isTailscale &&
+      (ip.address.startsWith("192.168.") || ip.address.startsWith("10.")),
+  );
+  return realLocal ? realLocal.address : ips[0]?.address || "localhost";
+}
+
+function findAvailablePort(startPort) {
+  return new Promise((resolve) => {
+    const s = net.createServer();
+    s.once("error", () => resolve(findAvailablePort(startPort + 1)));
+    s.once("listening", () => s.close(() => resolve(startPort)));
+    s.listen(startPort, "0.0.0.0");
+  });
 }
 
 // --- LÓGICA DO ATEM ---
-myAtem.on("connected", () => {
-  console.log("✅ Conectado ao ATEM!");
-  io.emit("status-atem", { connected: true, ip: getSavedIp() });
+let lastTally = { program: 0, preview: 0 };
+let lastInputs = [];
 
+const broadcastAtemState = () => {
+  // Pega inputs físicos (tipo 0)
   if (myAtem.state && myAtem.state.inputs) {
-    const inputsMap = Object.values(myAtem.state.inputs)
-      .filter((input) => input.internalPortType === 0)
-      .map((input) => ({
-        id: input.inputId,
-        label: input.longName || `Câmera ${input.inputId}`,
+    lastInputs = Object.values(myAtem.state.inputs)
+      .filter((i) => i.internalPortType === 0)
+      .map((i) => ({
+        id: i.inputId,
+        label: i.longName || `Câmera ${i.inputId}`,
       }));
-    io.emit("available-inputs", inputsMap);
   }
+
+  io.emit("status-atem", { connected: myAtem.status === 2, ip: getSavedIp() });
+  io.emit("available-inputs", lastInputs);
+};
+
+myAtem.on("connected", () => {
+  console.log("✅ ATEM Conectado");
+  broadcastAtemState();
 });
 
 myAtem.on("disconnected", () => {
-  console.log("❌ Desconectado do ATEM.");
+  console.log("❌ ATEM Desconectado");
   io.emit("status-atem", { connected: false });
 });
 
-let lastTally = { program: 0, preview: 0 };
 myAtem.on("stateChanged", (state) => {
-  const me = state.video && state.video.mixEffects[0];
+  const me = state.video?.mixEffects[0];
   if (me) {
     const newTally = { program: me.programInput, preview: me.previewInput };
-    if (
-      newTally.program !== lastTally.program ||
-      newTally.preview !== lastTally.preview
-    ) {
+    if (JSON.stringify(newTally) !== JSON.stringify(lastTally)) {
       lastTally = newTally;
-      io.emit("tallyUpdate", newTally);
+      io.emit("tallyUpdate", lastTally);
     }
   }
-
-  if (state.inputs) {
-    const inputsMap = Object.values(state.inputs)
-      .filter((input) => input.internalPortType === 0) // Pega apenas entradas físicas
-      .map((input) => ({
-        id: input.inputId,
-        label: input.longName || `Câmera ${input.inputId}`,
-      }));
-
-    console.log("Enviando lista de câmeras atualizada...");
-    io.emit("available-inputs", inputsMap);
-  }
+  // Se mudar nomes de câmeras no ATEM Software Control, atualiza o front
+  if (state.inputs) broadcastAtemState();
 });
 
-// --- SERVINDO O FRONTEND E SOCKETS ---
+// --- COMUNICAÇÃO (SOCKETS) ---
 io.on("connection", (socket) => {
-  console.log("📱 Dispositivo conectado.");
+  console.log(`📱 Novo cliente: ${socket.id}`);
 
+  // Envia TUDO o que o servidor já sabe de imediato
   socket.emit("current-ip", getSavedIp());
   socket.emit("server-ip", getLocalIp());
-  socket.emit(
-    "server-port",
-    server.address() ? server.address().port : DEFAULT_PORT,
-  );
+  socket.emit("server-port", server.address()?.port || DEFAULT_PORT);
+  socket.emit("all-server-ips", getAllIps());
+  socket.emit("status-atem", { connected: myAtem.status === 2 });
+  socket.emit("tallyUpdate", lastTally);
+  socket.emit("available-inputs", lastInputs);
 
-  const emitAtemStatus = () => {
-    const isRealConnected = myAtem.status === 2; // 2 é o código para 'Connected' funcional
-    io.emit("status-atem", {
-      connected: isRealConnected,
-      message: isRealConnected ? "CONECTADO ✅" : "DESCONECTADO ❌",
-    });
-  };
-
-  // O bloco de update deve ficar APENAS aqui dentro
-  socket.on("update-atem-ip", (newIp) => {
-    const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
-    if (!ipRegex.test(newIp)) return;
+  socket.on("update-atem-ip", async (newIp) => {
+    if (!/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(newIp)) return;
     fs.writeFileSync(configPath, JSON.stringify({ atemIp: newIp }));
     io.emit("current-ip", newIp);
     io.emit("status-atem", { connected: false, message: "Reconectando..." });
-    myAtem
-      .disconnect()
-      .then(() => myAtem.connect(newIp))
-      .catch(() => myAtem.connect(newIp));
+    try {
+      await myAtem.disconnect();
+    } catch (e) {}
+    myAtem.connect(newIp);
   });
 });
 
+// --- EXPRESS / STATIC ---
 const frontendPath = path.join(__dirname, "..", "frontend", "build");
 app.use(express.static(frontendPath));
-
-// --- ROTA DE TESTE (Simulação de Câmera) ---
-app.get("/teste/:cam", (req, res) => {
-  const camNumber = parseInt(req.params.cam);
-
-  // Simula o envio de um novo estado de Tally via Socket
-  io.emit("tallyUpdate", {
-    program: camNumber,
-    preview: 0,
-  });
-
-  console.log(`🧪 Simulação: Câmera ${camNumber} colocada em PROGRAM`);
-  res.send(`Simulando Câmera ${camNumber} no AR.`);
-});
-
-app.get("*", (req, res) => {
-  const indexPath = path.join(frontendPath, "index.html");
-  if (fs.existsSync(indexPath)) res.sendFile(indexPath);
-  else res.status(404).send("Build não encontrado.");
-});
+app.get("*", (req, res) => res.sendFile(path.join(frontendPath, "index.html")));
 
 // --- START ---
 findAvailablePort(DEFAULT_PORT).then((port) => {
   server.listen(port, "0.0.0.0", () => {
-    console.log(
-      `🚀 Tally v${VERSION} rodando em http://${getLocalIp()}:${port}`,
-    );
+    console.log(`🚀 Tally v${VERSION} em http://${getLocalIp()}:${port}`);
     myAtem.connect(getSavedIp());
-    if (process.send) process.send({ type: "SERVER_READY", port: port });
+    if (process.send) process.send({ type: "SERVER_READY", port });
   });
 });

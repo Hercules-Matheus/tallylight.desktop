@@ -1,12 +1,6 @@
 import "./App.css";
-import React, { useEffect, useState, useRef } from "react";
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Link,
-  useNavigate,
-} from "react-router-dom";
+import { useEffect, useState, useRef } from "react";
+import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import io from "socket.io-client";
 import NoSleep from "nosleep.js";
 import { QRCodeCanvas } from "qrcode.react";
@@ -21,20 +15,26 @@ const socket = io(SOCKET_SERVER, { transports: ["websocket"] });
 
 function App() {
   const [programCam, setProgramCam] = useState(null);
+  const [previewCam, setPreviewCam] = useState(null);
   const [serverIp, setServerIp] = useState("");
   const [serverPort, setServerPort] = useState(58000);
   const [atemIp, setAtemIp] = useState("");
   const [atemStatus, setAtemStatus] = useState(false);
   const [availableInputs, setAvailableInputs] = useState([]);
+  const [allIps, setAllIps] = useState([]);
 
   useEffect(() => {
-    socket.on("tallyUpdate", (data) => setProgramCam(data.program));
+    socket.on("tallyUpdate", (data) => {
+      setProgramCam(data.program);
+      setPreviewCam(data.preview);
+    });
     socket.on("current-ip", (ip) => setAtemIp(ip));
     socket.on("server-ip", (ip) => setServerIp(ip));
     socket.on("server-port", (port) => setServerPort(port));
     socket.on("available-inputs", (inputs) => {
       setAvailableInputs(inputs);
     });
+    socket.on("all-server-ips", (ips) => setAllIps(ips));
 
     // VALIDAÇÃO REAL: O backend envia o status real do hardware
     socket.on("status-atem", (data) => {
@@ -55,6 +55,7 @@ function App() {
       socket.off("status-atem");
       socket.off("available-inputs");
       socket.off("status-atem");
+      socket.off("all-server-ips");
     };
   }, []);
 
@@ -66,6 +67,7 @@ function App() {
           element={
             <TallyScreen
               programCam={programCam}
+              previewCam={previewCam}
               atemStatus={atemStatus}
               availableInputs={availableInputs}
             />
@@ -80,6 +82,8 @@ function App() {
               atemStatus={atemStatus}
               serverIp={serverIp}
               serverPort={serverPort}
+              setServerIp={setServerIp}
+              allIps={allIps}
             />
           }
         />
@@ -89,16 +93,32 @@ function App() {
 }
 
 // --- TELA DO CINEGRAFISTA ---
-const TallyScreen = ({ programCam, atemStatus, availableInputs }) => {
+const TallyScreen = ({
+  programCam,
+  previewCam,
+  atemStatus,
+  availableInputs,
+}) => {
   const [myCam, setMyCam] = useState(1);
   const noSleep = useRef(new NoSleep());
-  const isOnAir = programCam === parseInt(myCam);
+
+  // Lógica de Comparação
+  const isOnProgram = parseInt(programCam) === parseInt(myCam);
+  const isOnPreview = parseInt(previewCam) === parseInt(myCam);
+
+  // Definição da Cor de Fundo
+  const getBackgroundColor = () => {
+    if (isOnProgram) return "#d32f2f"; // Vermelho (No Ar)
+    if (isOnPreview) return "#2e7d32"; // Verde (Preparar)
+    return "#2c2c2c"; // Cinza (Idle)
+  };
 
   return (
     <div
       style={{
         ...styles.containerTally,
-        backgroundColor: isOnAir ? "#d32f2f" : "#2c2c2c",
+        backgroundColor: getBackgroundColor(),
+        transition: "background-color 0.2s ease", // Suaviza a troca de cor
       }}
     >
       <div style={styles.header}>
@@ -126,8 +146,9 @@ const TallyScreen = ({ programCam, atemStatus, availableInputs }) => {
         )}
       </select>
 
-      <h1 style={{ fontSize: "5rem" }}>{isOnAir ? "ON AIR" : "OFF AIR"}</h1>
-
+      <h1 style={{ fontSize: "5rem" }}>
+        {isOnProgram ? "ON AIR" : isOnPreview ? "PREVIEW" : "OFF AIR"}
+      </h1>
       <button
         onClick={() => {
           noSleep.current.enable();
@@ -152,6 +173,8 @@ const AdminScreen = ({
   atemStatus,
   serverIp,
   serverPort,
+  setServerIp,
+  allIps,
 }) => {
   const [localIp, setLocalIp] = useState(atemIp);
   const [isUpdating, setIsUpdating] = useState(false); // Trava de UI
@@ -234,6 +257,18 @@ const AdminScreen = ({
         </div>
       </div>
 
+      <select
+        value={serverIp}
+        onChange={(e) => setServerIp(e.target.value)}
+        style={styles.selectNetwork}
+      >
+        {allIps.map((ip) => (
+          <option key={ip.address} value={ip.address}>
+            {ip.name}: {ip.address} {ip.isTailscale ? "(VPN/Tailscale)" : ""}
+          </option>
+        ))}
+      </select>
+
       <div style={styles.accessBox}>
         <QRCodeCanvas value={`http://${serverIp}:${serverPort}`} size={128} />
         <code style={styles.linkCode}>
@@ -308,6 +343,16 @@ const styles = {
     padding: "15px",
     borderRadius: "10px",
     color: "black",
+  },
+  selectNetwork: {
+    width: "300px",
+    marginTop: "20px",
+    padding: "10px",
+    borderRadius: "5px",
+    border: "1px solid #555",
+    backgroundColor: "#333",
+    color: "white",
+    fontSize: "0.9rem",
   },
   linkCode: {
     display: "block",
