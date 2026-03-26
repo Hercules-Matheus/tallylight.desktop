@@ -1,6 +1,6 @@
 {
   "name": "tally-desktop",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Sistema de Tally para ATEM Blackmagic",
   "main": "main.js",
   "scripts": {
