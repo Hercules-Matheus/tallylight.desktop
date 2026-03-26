@@ -56,14 +56,17 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 450, // Aumentado levemente para o QR Code respirar
     height: 700, // Aumentado para acomodar a tela de admin com scroll se necessário
+    title: "Tally Light",
     show: false,
     alwaysOnTop: true, // Dica de UX: Tally no PC geralmente fica sobre o vMix/OBS
-    icon: path.join(__dirname, "icon.png"),
+    icon: path.join(__dirname, "assets", "icon.ico"),
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
     },
   });
+
+  mainWindow.on("page-title-updated", (e) => e.preventDefault());
 
   // Listener para o backend avisar que subiu o servidor
   backendProcess.on("message", (msg) => {

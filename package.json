@@ -14,19 +14,20 @@
   },
   "build": {
     "appId": "com.vvp.tally",
-    "productName": "TallyControl",
+    "productName": "Tally Light",
     "directories": {
       "output": "dist"
     },
     "win": {
       "target": "portable",
-      "icon": "icon.png"
+      "icon": "assets/icon.ico"
     },
     "files": [
       "main.js",
       "icon.png",
       "backend/**/*",
       "frontend/build/**/*",
+      "assets/icon.ico",
       "node_modules/**/*",
       "!node_modules/electron",
       "!node_modules/electron-builder",

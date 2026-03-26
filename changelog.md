@@ -3,6 +3,25 @@
 Todas as alterações notáveis neste projeto serão documentadas neste arquivo.
 O projeto adere ao Versionamento Semântico (https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-03-26
+
+### Adicionado
+- **Branding Consolidado (Desktop):** Implementação de ícone personalizado na Barra de Tarefas, Janela e Área de Notificação (Tray) utilizando ativos dedicados em `/assets`.
+- **Identidade Visual Mobile (PWA):** Atualização do `manifest.json` e substituição dos ícones de sistema (`logo192`, `logo512`) para que o app exiba a logo correta ao ser "instalado" na tela inicial do Android/iOS.
+- **Customização de Título Dinâmico:** O título da janela Electron agora reflete o nome oficial do produto e a versão atual, com trava de atualização para evitar que o título padrão do React (index.html) sobrescreva a marca.
+- **Configuração de Build Profissional:** Adicionada a propriedade `productName` no `package.json` para garantir que o executável (.exe) e o processo no Gerenciador de Tarefas sejam identificados como "TallyControl".
+
+### Alterado
+- **Estrutura de Ativos:** Migração do ícone mestre de pastas temporárias de build (`dist/.icon-ico/`) para uma pasta de recursos persistente (`/assets`) na raiz do projeto.
+- **Estética de Status (Mobile):** Ajuste do `theme_color` no manifesto web para alinhar a barra de status do navegador com a paleta de cores do sistema Tally.
+- **Hierarquia de Títulos:** Padronização do nome "TallyControl - Hercules" em todas as instâncias de interface.
+
+### Corrigido
+- **Persistência de Ícone:** Resolvido o problema onde o ícone da barra de tarefas voltava ao padrão do Electron após o empacotamento.
+- **Sobreposição de Nome de Janela:** Implementado o listener `page-title-updated` para manter o branding do app consistente durante a navegação entre as telas Tally e Admin.
+
+---
+
 ## [1.2.0] - 2026-03-26
 
 ### Adicionado
@@ -32,12 +51,3 @@ O projeto adere ao Versionamento Semântico (https://semver.org/spec/v2.0.0.html
 - **Restauração da Rota de Teste:** Reativado endpoint 'GET /teste/:cam' para simulação via browser.
 - **Loading State (Admin):** Trava visual 'isUpdating' para evitar cliques duplicados durante a reconexão.
 - **Botão de Reset:** Atalho para restaurar o último IP estável no formulário de configuração.
-
-### Corrigido
-- **Bypass de Restrição do CRA:** Resolvido erro de 'Module not found' fora do diretório 'src/'.
-- **Validação de Hardware:** O indicador de conexão agora depende estritamente do handshake bem-sucedido (Status 2).
-- **Input Freeze:** Resolvido problema de teclado indisponível no Electron através da desvinculação entre estados de digitação e rede.
-
-### Segurança / QA
-- **Trava de Tally Offline:** Validação de conectividade antes de permitir a mudança de cor para o estado "ON AIR".
-- **Estabilidade:** Refatoração do gerenciamento de instâncias do Socket.io para evitar quedas em uso prolongado.
