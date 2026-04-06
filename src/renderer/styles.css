@@ -1,0 +1,67 @@
+body {
+  background: #080808;
+  color: #ffffff;
+  font-family: "Inter", system-ui, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+}
+.card {
+  background: #111111;
+  padding: 30px;
+  border-radius: 15px;
+  width: 350px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  text-align: center;
+  border: 1px solid #1a1a1a;
+}
+.accent {
+  color: #ff1744;
+}
+input {
+  padding: 12px;
+  background: #080808;
+  border: 1px solid #1a1a1a;
+  color: #ffffff;
+  border-radius: 8px;
+}
+button {
+  padding: 15px;
+  background: #ff1744;
+  border: none;
+  color: #ffffff;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
+}
+button.danger {
+  background: #1a1a1a;
+  margin-top: 20px;
+}
+#qr-container {
+  background: #ffffff;
+  padding: 10px;
+  border-radius: 10px;
+  align-self: center;
+}
+.on {
+  color: #00e676;
+}
+.off {
+  color: #ff1744;
+}
+.status-bar {
+  font-size: 0.8rem;
+  opacity: 0.8;
+  display: flex;
+  justify-content: space-around;
+}
+.session-info h2 {
+  letter-spacing: 4px;
+  color: #ff1744;
+  margin: 5px 0;
+}

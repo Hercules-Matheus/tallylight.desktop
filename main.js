@@ -1,105 +1,71 @@
 const {
   app,
   BrowserWindow,
-  Menu,
+  ipcMain,
   Tray,
+  Menu,
   nativeImage,
-  Notification,
 } = require("electron");
 const path = require("path");
-const { fork } = require("child_process");
+const fs = require("fs");
 
-let mainWindow;
+// --- CONFIGURAÇÃO DE AMBIENTE ---
+const isDev = !app.isPackaged;
+const envPath = isDev
+  ? path.join(__dirname, ".env")
+  : path.join(process.resourcesPath, ".env");
+
+require("dotenv").config({ path: envPath });
+
+// --- IMPORTAÇÃO DE MÓDULOS INTERNOS ---
+const orchestrator = require("./src/main/index");
+const store = require("./src/main/core/StateStore");
+const cloud = require("./src/main/providers/SupabaseProvider");
+
+// Variáveis Globais (Essencial declarar aqui para evitar Garbage Collection)
+let mainWindow = null;
 let tray = null;
-let backendProcess;
+let isQuitting = false;
 
-function createTray() {
-  const iconPath = path.join(__dirname, "icon.png");
-  const icon = nativeImage.createFromPath(iconPath);
-  tray = new Tray(icon);
+const configPath = path.join(app.getPath("userData"), "config.json");
 
-  const contextMenu = Menu.buildFromTemplate([
-    { label: "Abrir Painel Tally", click: () => mainWindow.show() },
-    { type: "separator" },
-    {
-      label: "Reiniciar Backend",
-      click: () => {
-        if (backendProcess) backendProcess.kill();
-        backendProcess = fork(path.join(__dirname, "backend", "index.js"));
-      },
-    },
-    {
-      label: "Encerrar Tudo",
-      click: () => {
-        app.isQuitting = true;
-        app.quit();
-      },
-    },
-  ]);
-
-  tray.setToolTip("Tally System - Ativo");
-  tray.setContextMenu(contextMenu);
-
-  tray.on("click", () => {
-    mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show();
-  });
+/**
+ * Gerencia a persistência de configurações locais (IP e Sala)
+ */
+function getUserData() {
+  if (fs.existsSync(configPath)) {
+    try {
+      return JSON.parse(fs.readFileSync(configPath));
+    } catch (e) {
+      console.error("Erro ao ler config.json, resetando...");
+    }
+  }
+  return { atemIp: "127.0.0.1", sessionCode: "" };
 }
 
+/**
+ * Cria a interface principal do sistema
+ */
 function createWindow() {
-  const userDataPath = app.getPath("userData");
-  const configPath = path.join(userDataPath, "config.json");
-
-  backendProcess = fork(path.join(__dirname, "backend", "index.js"), [
-    configPath,
-  ]);
-
   mainWindow = new BrowserWindow({
-    width: 450, // Aumentado levemente para o QR Code respirar
-    height: 700, // Aumentado para acomodar a tela de admin com scroll se necessário
-    title: "Tally Light",
-    show: false,
-    alwaysOnTop: true, // Dica de UX: Tally no PC geralmente fica sobre o vMix/OBS
-    icon: path.join(__dirname, "assets", "icon.ico"),
+    width: 450,
+    height: 680,
+    resizable: false,
+    maximizable: false,
+    title: "Tally Cloud Admin",
+    icon: path.join(__dirname, "assets/icon.ico"),
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
+      preload: path.join(__dirname, "src/main/preload.js"),
+      nodeIntegration: false,
+      contextIsolation: true,
     },
   });
 
-  mainWindow.on("page-title-updated", (e) => e.preventDefault());
+  mainWindow.loadFile(path.join(__dirname, "src/renderer/index.html"));
 
-  // Listener para o backend avisar que subiu o servidor
-  backendProcess.on("message", (msg) => {
-    if (msg.type === "SERVER_READY") {
-      const serverUrl = `http://localhost:${msg.port}`;
-      console.log(`Conectando Electron na porta: ${msg.port}`);
-
-      // Carrega a URL e só mostra a janela quando o React estiver pronto
-      mainWindow.loadURL(serverUrl);
-      mainWindow.once("ready-to-show", () => {
-        mainWindow.show();
-      });
-    }
-  });
-
-  const isDev = !app.isPackaged;
-  if (isDev) {
-    mainWindow.loadURL("http://localhost:3001");
-    // mainWindow.webContents.openDevTools(); // Você decide se deixa aberto
-  }
-
-  // --- TRATAMENTO PARA REACT ROUTER ---
-  // Se o usuário atualizar a página em uma rota como /admin, o Electron
-  // precisa redirecionar para o index.html para o Router reassumir.
-  mainWindow.webContents.on("did-fail-load", () => {
-    if (!isDev) {
-      console.log("Falha no load, recuperando rota principal...");
-      // Aqui você poderia forçar o reload da porta do backend se necessário
-    }
-  });
-
+  // No Windows, ao fechar a janela principal, apenas escondemos para a Tray
   mainWindow.on("close", (event) => {
-    if (!app.isQuitting) {
+    if (!isQuitting) {
       event.preventDefault();
       mainWindow.hide();
     }
@@ -107,15 +73,128 @@ function createWindow() {
   });
 }
 
-app.on("ready", () => {
-  createTray(); // Primeiro criamos o Tray
-  createWindow(); // Depois a Janela
+/**
+ * Cria o ícone na bandeja do sistema (System Tray)
+ */
+function createTray() {
+  const iconPath = path.join(__dirname, "assets/icon.ico");
+  const icon = nativeImage.createFromPath(iconPath);
 
-  // Usando a API de Notificação moderna (mais estável que Balloon)
-  if (Notification.isSupported()) {
-    new Notification({
-      title: "Tally System",
-      body: "🚀 Sistema iniciado em segundo plano!",
-    }).show();
+  tray = new Tray(icon);
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: "Abrir Painel",
+      click: () => mainWindow.show(),
+    },
+    { type: "separator" },
+    {
+      label: "Encerrar Tally",
+      click: () => {
+        isQuitting = true;
+        app.quit();
+      },
+    },
+  ]);
+
+  tray.setToolTip("Tally Cloud Admin - Operacional");
+  tray.setContextMenu(contextMenu);
+
+  // Toggle exibir/esconder ao clicar no ícone da bandeja
+  tray.on("click", () => {
+    if (mainWindow.isVisible()) {
+      mainWindow.hide();
+    } else {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+}
+
+// --- IPC HANDLERS (Comunicação com o Frontend) ---
+
+// 1. Login Administrativo
+ipcMain.handle("auth:login", async (_, { email, password }) => {
+  try {
+    const user = await cloud.login(email, password);
+    return { success: true, user };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// 2. Recuperar configurações salvas
+ipcMain.handle("get-config", () => {
+  return getUserData();
+});
+
+// 3. Iniciar fluxo ATEM -> Cloud
+ipcMain.handle("app:start-transmission", async (_, { atemIp, sessionCode }) => {
+  try {
+    // 1. Persiste as configurações locais e inicia a sessão no Supabase
+    fs.writeFileSync(
+      configPath,
+      JSON.stringify({ atemIp, sessionCode }, null, 2),
+    );
+    await cloud.startSession(sessionCode);
+
+    // 2. NOVO: Captura os inputs do ATEM e envia para o Supabase
+    // Usamos .once para não ficar repetindo isso a cada pequena mudança de nome
+    orchestrator.once("inputs-updated", async (inputs) => {
+      console.log("Enviando lista de câmeras para a nuvem...");
+      await cloud.saveAtemInputs(sessionCode, inputs);
+
+      // Opcional: Avisa o Admin Desktop que os nomes chegaram
+      if (mainWindow) {
+        mainWindow.webContents.send("atem-inputs-data", inputs);
+      }
+    });
+
+    // 3. Conecta ao hardware (ATEM)
+    orchestrator.connectHardware(atemIp);
+
+    // 4. Inicia o fluxo de dados
+    orchestrator.startTallyFlow(sessionCode);
+
+    return { success: true };
+  } catch (error) {
+    console.error("Erro ao iniciar transmissão:", error);
+    return { success: false, error: error.message };
+  }
+});
+
+// --- EVENTOS DE ESTADO (Main -> Renderer) ---
+
+// Repassa mudanças de conexão do ATEM para a interface visual
+store.on("statusChange", (online) => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send("status-update", {
+      type: "atem",
+      connected: online,
+    });
+  }
+});
+
+// --- CICLO DE VIDA DO APP ---
+
+app.whenReady().then(() => {
+  createWindow();
+  createTray();
+});
+
+// Garante que o processo seja encerrado corretamente no Windows/Linux
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit();
+  }
+});
+
+// Cleanup antes de sair (encerra a sessão no Supabase para não deixar lixo no banco)
+app.on("before-quit", async () => {
+  try {
+    isQuitting = true;
+    await cloud.stopSession();
+  } catch (e) {
+    console.error("Erro no logout final");
   }
 });

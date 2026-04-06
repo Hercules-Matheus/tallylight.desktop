@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="styles.css" />
+    <title>Tally Cloud Admin</title>
+  </head>
+  <body>
+    <div id="app">
+      <section id="screen-auth" class="card">
+        <h1>Tally <span class="accent">Cloud</span></h1>
+        <input type="email" id="login-email" placeholder="E-mail do Admin" />
+        <input type="password" id="login-pass" placeholder="Senha" />
+        <button id="btn-login">ACESSAR PAINEL</button>
+      </section>
+
+      <section id="screen-setup" class="card" style="display: none">
+        <h2>Configuração</h2>
+        <input
+          type="text"
+          id="atem-ip"
+          placeholder="IP do ATEM (ex: 192.168.1.50)"
+        />
+        <input
+          type="text"
+          id="session-code"
+          placeholder="Código da Sala (ex: SALA-01)"
+        />
+        <button id="btn-start">INICIAR TRANSMISSÃO</button>
+      </section>
+
+      <section id="screen-dash" class="card" style="display: none">
+        <div class="status-bar">
+          <span id="status-atem">ATEM: <b class="off">OFFLINE</b></span>
+          <span id="status-cloud">CLOUD: <b class="on">ONLINE</b></span>
+        </div>
+
+        <div id="qr-container">
+          <canvas id="qr-canvas"></canvas>
+        </div>
+
+        <div class="session-info">
+          <p>CÓDIGO DA SESSÃO:</p>
+          <h2 id="display-session">----</h2>
+          <p
+            id="sync-status"
+            style="font-size: 0.8rem; opacity: 0.6; margin-top: 5px"
+          >
+            Aguardando câmeras...
+          </p>
+        </div>
+
+        <button id="btn-stop" class="danger">ENCERRAR SESSÃO</button>
+      </section>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>

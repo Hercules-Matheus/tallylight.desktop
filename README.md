@@ -1,74 +1,76 @@
-# 🎥 Tally Light - ATEM BLACKMAGIC (v1.3.0)
+============================================================
+🎥 TALLY LIGHT - ATEM BLACKMAGIC (v2.0.0)
+============================================================
+Desenvolvido por: Hercules Matheus (2026)
+Status: Versão Estável de Produção
 
-O Tally Light é um ecossistema de baixa latência que transforma smartphones em
-sinalizadores de Tally (Program/Preview) para switchers Blackmagic ATEM.
-
----
-
-1. NOVIDADES DA VERSÃO 1.3.0 (MAIOR ESTABILIDADE)
-
----
-
-- **Locução de Status (Voz):** Avisos sonoros profissionais para "No Ar", "Preview" e "Fora".
-- **Interface em Grid:** Seleção de câmeras via botões diretos (fim do bug do 'select' no PC).
-- **Modo Produção Unificado:** Ativação do NoSleep + Áudio em um único clique no celular.
-- **Branding Consolidado:** Ícones personalizados na Barra de Tarefas e Tray (Área de Notificação).
-- **Tally de Preview:** Suporte a luz verde (Preview) além da luz vermelha (Program).
-- **Multi-Interface IP:** Seletor de rede no Admin (Wi-Fi, Ethernet, Tailscale).
-- **Hot-Connect:** Sincronização instantânea de câmeras e status ao conectar o celular.
-- **Auto-Sync Version:** Versão centralizada no package.json refletida em todo o app.
+1. O SALTO PARA A VERSÃO 2.0.0 (MAJOR UPDATE)
 
 ---
 
-2. COMO USAR (EXECUTÁVEL)
+A versão 2.0.0 marca a maturidade do sistema, focando em
+estabilidade de rede, UX intuitiva e sincronização total
+entre o hardware físico e a nuvem.
+
+PRINCIPAIS IMPLEMENTAÇÕES:
+
+- ARQUITETURA EVENT-DRIVEN: Orchestrator reescrito como
+  EventEmitter para eliminar erros de sincronia e funções
+  indefinidas.
+- GRID DE SELEÇÃO DINÂMICA: Substituição total do seletor
+  'select' por uma interface de botões (Grid) no celular,
+  resolvendo problemas de visibilidade e legibilidade.
+- SYNC AUTOMÁTICO DE LABELS: Nomes das câmeras definidos no
+  ATEM Software Control são enviados via JSONB para o
+  Supabase e refletidos nos botões dos cinegrafistas.
+- SEGURANÇA RLS CONSOLIDADA: Políticas de Row Level Security
+  (INSERT/UPDATE) ajustadas para permitir upserts seguros
+  vinculados ao ID do administrador.
+- PRODUÇÃO "ONE-CLICK": Ativação simultânea de NoSleep,
+  Audio Context e Tally Flow ao entrar na sessão.
+
+2. NOVIDADES TÉCNICAS
 
 ---
 
-- **Inicialização:** Abra o `Tally Control.exe`. O sistema inicia na bandeja do sistema (Tray).
-- **Configuração:** Clique no ícone da bandeja > "Abrir Painel Tally".
-- **Conexão ATEM:** Digite o IP da sua mesa ATEM e clique em "Atualizar IP".
-- **Interface de Rede:** No painel Admin, escolha a placa de rede correta para gerar o QR Code.
-- **Cinegrafistas:** Peça para os cinegrafistas lerem o QR Code.
-  - **Dica:** Ao abrir o link, clique em "ATIVAR MODO PRODUÇÃO" para habilitar as vozes e impedir o bloqueio da tela.
+- Latência: Reduzida para <100ms via WebSockets e
+  Supabase Realtime.
+- Persistência Local: IP e Sessão salvos automaticamente
+  em %AppData%/config.json.
+- Locução de Voz: Avisos automáticos de status ("No Ar",
+  "Preview") para operação sem necessidade de olhar a tela.
+- Gerenciamento de Tray: Execução silenciosa na barra de
+  tarefas do Windows para evitar fechamento acidental.
+
+3. COMANDOS DE OPERAÇÃO (NPM)
 
 ---
 
-3. SCRIPTS DE COMANDO (NPM)
+- npm run release : [MASTER] Limpa, compila e gera o .exe final.
+- npm run sync-version: Sincroniza a versão entre o core e o front.
+- npm start : Inicia o ambiente de desenvolvimento.
+
+4. REQUISITOS DE SISTEMA
 
 ---
 
-- `npm start` # Inicia o Electron em modo desenvolvimento
-- `npm run clean` # Remove as pastas /dist e /build antigas
-- `npm run sync-version`# Sincroniza a versão do package.json com o frontend/src/version.js
-- `npm run build-front` # Sincroniza a versão e gera o build estático do React
-- `npm run build-app` # Empacota o executável (.exe) via electron-builder
-- `npm run release` # [Mestre] Limpa, compila o front e gera o executável final
-- `npm version minor` # Incrementa para v1.3.0 e cria a tag Git correspondente
+- Hardware: Switchers Blackmagic ATEM (Todos os modelos).
+- Rede: Conexão via cabo (Ethernet) recomendada para o PC
+  Admin e Wi-Fi estável (ou 4G/5G) para os celulares.
+- Cloud: Projeto configurado no Supabase com Realtime ativado.
+
+5. GUIA DE CAMPO PARA O CINEGRAFISTA
 
 ---
 
-4. REQUISITOS TÉCNICOS & QA
+1. Escaneie o QR Code no painel do Admin.
+2. Clique em "ATIVAR MODO PRODUÇÃO" (Libera som e trava a tela).
+3. Escolha sua câmera no Grid (ex: CAM 01).
+4. Cores de Sinalização:
+   - VERMELHO : Você está no ar (PROGRAM).
+   - VERDE : Você é a próxima câmera (PREVIEW).
+   - CINZA : Standby / Fora do ar.
 
----
-
-- **Latência:** Comunicação via WebSockets (Socket.io) para resposta < 100ms.
-- **Mídia:** Suporte a reprodução de áudio em background (necessário interação inicial do usuário).
-- **Persistência:** O IP do ATEM é salvo em `%AppData%/Tally Control/config.json`.
-- **Prevenção de Sono:** Utiliza NoSleep.js para impedir que o celular bloqueie a tela.
-- **Rede Virtual:** Suporte nativo para Tailscale, permitindo Tally remoto via VPN.
-
----
-
-5. TECNOLOGIAS UTILIZADAS
-
----
-
-- **Electron:** Desktop Shell e gerenciamento de processos.
-- **Node.js:** Backend para protocolo UDP ATEM.
-- **React:** UI reativa para dispositivos móveis com suporte a áudio.
-- **Socket.io:** Distribuição de estado em tempo real.
-- **Atem-Connection:** Implementação do protocolo Blackmagic.
-
----
-
-# Desenvolvido por: Hercules Matheus (2026)
+============================================================
+"Tally Light: Precisão e agilidade em cada corte."
+============================================================
