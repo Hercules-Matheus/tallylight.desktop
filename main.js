@@ -22,30 +22,38 @@ const orchestrator = require("./src/main/index");
 const store = require("./src/main/core/StateStore");
 const cloud = require("./src/main/providers/SupabaseProvider");
 
-// Variáveis Globais (Essencial declarar aqui para evitar Garbage Collection)
+// Variáveis Globais (declaradas aqui para evitar Garbage Collection)
 let mainWindow = null;
 let tray = null;
 let isQuitting = false;
 
 const configPath = path.join(app.getPath("userData"), "config.json");
 
-/**
- * Gerencia a persistência de configurações locais (IP e Sala)
- */
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
 function getUserData() {
   if (fs.existsSync(configPath)) {
     try {
       return JSON.parse(fs.readFileSync(configPath));
     } catch (e) {
-      console.error("Erro ao ler config.json, resetando...");
+      console.error("[Config] Erro ao ler config.json, resetando...");
     }
   }
   return { atemIp: "127.0.0.1", sessionCode: "" };
 }
 
-/**
- * Cria a interface principal do sistema
- */
+function sendToRenderer(channel, payload) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send(channel, payload);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Janela principal
+// ---------------------------------------------------------------------------
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 450,
@@ -63,30 +71,26 @@ function createWindow() {
 
   mainWindow.loadFile(path.join(__dirname, "src/renderer/index.html"));
 
-  // No Windows, ao fechar a janela principal, apenas escondemos para a Tray
+  // No Windows, fechar a janela apenas esconde para a Tray
   mainWindow.on("close", (event) => {
     if (!isQuitting) {
       event.preventDefault();
       mainWindow.hide();
     }
-    return false;
   });
 }
 
-/**
- * Cria o ícone na bandeja do sistema (System Tray)
- */
+// ---------------------------------------------------------------------------
+// System Tray
+// ---------------------------------------------------------------------------
+
 function createTray() {
   const iconPath = path.join(__dirname, "assets/icon.ico");
   const icon = nativeImage.createFromPath(iconPath);
-
   tray = new Tray(icon);
 
   const contextMenu = Menu.buildFromTemplate([
-    {
-      label: "Abrir Painel",
-      click: () => mainWindow.show(),
-    },
+    { label: "Abrir Painel", click: () => mainWindow.show() },
     { type: "separator" },
     {
       label: "Encerrar Tally",
@@ -100,7 +104,6 @@ function createTray() {
   tray.setToolTip("Tally Cloud Admin - Operacional");
   tray.setContextMenu(contextMenu);
 
-  // Toggle exibir/esconder ao clicar no ícone da bandeja
   tray.on("click", () => {
     if (mainWindow.isVisible()) {
       mainWindow.hide();
@@ -111,9 +114,11 @@ function createTray() {
   });
 }
 
-// --- IPC HANDLERS (Comunicação com o Frontend) ---
+// ---------------------------------------------------------------------------
+// IPC Handlers
+// ---------------------------------------------------------------------------
 
-// 1. Login Administrativo
+// 1. Login
 ipcMain.handle("auth:login", async (_, { email, password }) => {
   try {
     const user = await cloud.login(email, password);
@@ -123,78 +128,114 @@ ipcMain.handle("auth:login", async (_, { email, password }) => {
   }
 });
 
-// 2. Recuperar configurações salvas
-ipcMain.handle("get-config", () => {
-  return getUserData();
-});
-
-// 3. Iniciar fluxo ATEM -> Cloud
-ipcMain.handle("app:start-transmission", async (_, { atemIp, sessionCode }) => {
+// 2. Reset de senha
+// Chama resetPasswordForEmail() no Supabase. O usuário receberá um email
+// com link para https://tallylight-frontend.vercel.app/reset-password
+ipcMain.handle("auth:reset-password", async (_, email) => {
   try {
-    // 1. Persiste as configurações locais e inicia a sessão no Supabase
-    fs.writeFileSync(
-      configPath,
-      JSON.stringify({ atemIp, sessionCode }, null, 2),
-    );
-    await cloud.startSession(sessionCode);
-
-    // 2. NOVO: Captura os inputs do ATEM e envia para o Supabase
-    // Usamos .once para não ficar repetindo isso a cada pequena mudança de nome
-    orchestrator.once("inputs-updated", async (inputs) => {
-      console.log("Enviando lista de câmeras para a nuvem...");
-      await cloud.saveAtemInputs(sessionCode, inputs);
-
-      // Opcional: Avisa o Admin Desktop que os nomes chegaram
-      if (mainWindow) {
-        mainWindow.webContents.send("atem-inputs-data", inputs);
-      }
-    });
-
-    // 3. Conecta ao hardware (ATEM)
-    orchestrator.connectHardware(atemIp);
-
-    // 4. Inicia o fluxo de dados
-    orchestrator.startTallyFlow(sessionCode);
-
+    await cloud.resetPassword(email);
     return { success: true };
   } catch (error) {
-    console.error("Erro ao iniciar transmissão:", error);
     return { success: false, error: error.message };
   }
 });
 
-// --- EVENTOS DE ESTADO (Main -> Renderer) ---
+// 3. Configurações salvas
+ipcMain.handle("get-config", () => getUserData());
 
-// Repassa mudanças de conexão do ATEM para a interface visual
-store.on("statusChange", (online) => {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send("status-update", {
-      type: "atem",
-      connected: online,
-    });
+// 3. Iniciar transmissão ATEM → Cloud
+ipcMain.handle("app:start-transmission", async (_, { atemIp, sessionCode }) => {
+  try {
+    // Persiste config local
+    fs.writeFileSync(
+      configPath,
+      JSON.stringify({ atemIp, sessionCode }, null, 2)
+    );
+
+    // Inicia sessão no Supabase
+    await cloud.startSession(sessionCode);
+
+    // Registra o listener de inputs ANTES de conectar, e remove após o primeiro
+    // disparo para não acumular. Usa wrapper nomeado para poder remover com segurança.
+    //
+    // CORREÇÃO: antes usava .once() registrado DEPOIS do connectHardware,
+    // o que criava uma race condition se o ATEM conectasse rapidamente.
+    // Agora o listener é registrado primeiro, e o cleanup é explícito.
+    const onInputs = async (inputs) => {
+      orchestrator.off("inputs-updated", onInputs); // cleanup manual e seguro
+
+      console.log(`[Main] ${inputs.length} câmeras recebidas, enviando para a nuvem...`);
+      await cloud.saveAtemInputs(sessionCode, inputs);
+
+      // CORREÇÃO: canal era "atem-inputs-data" aqui mas preload ouvia "atem-inputs".
+      // Agora ambos usam "atem-inputs".
+      sendToRenderer("atem-inputs", inputs);
+    };
+
+    orchestrator.on("inputs-updated", onInputs);
+
+    // Conecta ao hardware e inicia fluxo de cortes
+    orchestrator.connectHardware(atemIp);
+    orchestrator.startTallyFlow(sessionCode);
+
+    return { success: true };
+  } catch (error) {
+    console.error("[Main] Erro ao iniciar transmissão:", error);
+    return { success: false, error: error.message };
   }
 });
 
-// --- CICLO DE VIDA DO APP ---
+// 4. Parar transmissão (chamado pelo btn-stop no renderer)
+//
+// CORREÇÃO: esse handler não existia. O renderer chamava window.location.reload()
+// diretamente, deixando a sessão como is_active: true no Supabase em caso de
+// crash ou fechamento pelo tray.
+ipcMain.handle("app:stop-transmission", async () => {
+  try {
+    await cloud.stopSession();
+    orchestrator.cleanup?.(); // limpa callbacks do AtemManager se disponível
+    return { success: true };
+  } catch (error) {
+    console.error("[Main] Erro ao parar transmissão:", error);
+    return { success: false, error: error.message };
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Eventos de estado: Main → Renderer
+// ---------------------------------------------------------------------------
+
+store.on("statusChange", (online) => {
+  sendToRenderer("status-update", { type: "atem", connected: online });
+});
+
+// ---------------------------------------------------------------------------
+// Ciclo de vida do app
+// ---------------------------------------------------------------------------
 
 app.whenReady().then(() => {
   createWindow();
   createTray();
 });
 
-// Garante que o processo seja encerrado corretamente no Windows/Linux
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-  }
+  if (process.platform !== "darwin") app.quit();
 });
 
-// Cleanup antes de sair (encerra a sessão no Supabase para não deixar lixo no banco)
-app.on("before-quit", async () => {
+// CORREÇÃO: before-quit com async não aguarda a Promise — o Electron sai antes
+// do stopSession completar. O padrão correto é: prevenir o quit, aguardar a
+// Promise e só então chamar app.quit() de novo com isQuitting = true.
+app.on("before-quit", async (event) => {
+  if (isQuitting) return; // segunda passagem: deixa sair
+  event.preventDefault();
+  isQuitting = true;
+
   try {
-    isQuitting = true;
     await cloud.stopSession();
+    console.log("[Main] Sessão encerrada com sucesso.");
   } catch (e) {
-    console.error("Erro no logout final");
+    console.error("[Main] Erro ao encerrar sessão:", e.message);
+  } finally {
+    app.quit(); // agora sai de verdade (isQuitting = true, não vai entrar aqui de novo)
   }
 });

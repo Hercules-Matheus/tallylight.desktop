@@ -4,54 +4,60 @@ const store = require("./StateStore");
 class AtemManager {
   constructor() {
     this.atem = new Atem();
-    this.onStateChange = null; // Callback para cortes (Program/Preview)
-    this.onInputsReceived = null; // NOVO: Callback para nomes das câmeras
+    this.onStateChange = null;
+    this.onInputsReceived = null;
 
-    // Monitoramento de Conexão
+    // Flag para evitar refreshInputs redundante durante stateChanged.
+    // stateChanged dispara para qualquer mudança (corte, áudio, etc).
+    // Sem esse controle, sincronizávamos inputs com Supabase a cada corte.
+    this._inputsRefreshed = false;
+
     this.atem.on("connected", () => {
-      console.log("ATEM Conectado!");
+      console.log("[ATEM] Conectado!");
       store.setAtemStatus(true);
+      this._inputsRefreshed = false;
 
-      // Assim que conecta, vamos ler os inputs disponíveis
+      // Aguarda o estado completo ser populado antes de ler inputs
       setTimeout(() => {
         this.refreshInputs();
+        this._inputsRefreshed = true;
       }, 1000);
     });
 
     this.atem.on("disconnected", () => {
-      console.log("ATEM Desconectado!");
+      console.log("[ATEM] Desconectado!");
       store.setAtemStatus(false);
+      this._inputsRefreshed = false;
     });
 
-    // Monitoramento de Mudança de Estado (Cortes)
-    this.atem.on("stateChanged", (state) => {
-      // 1. Verificar se houve mudança nos nomes das câmeras (Inputs)
-      if (state.inputs && this.onInputsReceived) {
+    this.atem.on("stateChanged", (state, pathKeys) => {
+      // 1. Refresh de inputs APENAS se ainda não foi feito após a conexão,
+      //    ou se o pathKeys indicar mudança explícita nos inputs.
+      //    Antes: qualquer stateChanged com state.inputs disparava refreshInputs.
+      const inputsChanged =
+        pathKeys && pathKeys.some((k) => k.startsWith("inputs."));
+
+      if (inputsChanged && this.onInputsReceived) {
+        this._inputsRefreshed = false; // Força re-leitura
         this.refreshInputs();
       }
 
-      // 2. Verificar cortes de vídeo
+      // 2. Mudanças de corte (Program / Preview)
       if (state.video && state.video.mixEffects) {
         const me = state.video.mixEffects[0];
-        if (me) {
-          const data = {
+        if (me && this.onStateChange) {
+          this.onStateChange({
             program: me.programInput,
             preview: me.previewInput,
-          };
-
-          if (this.onStateChange) {
-            this.onStateChange(data);
-          }
+          });
         }
       }
     });
   }
 
-  // Método para extrair e formatar os nomes das câmeras
   refreshInputs() {
     if (!this.atem.state || !this.atem.state.inputs) return;
 
-    // Filtra apenas os inputs que são câmeras ou entradas físicas (evita Color Bars, Black, etc, se desejar)
     const rawInputs = this.atem.state.inputs;
     const formattedInputs = Object.keys(rawInputs)
       .map((key) => {
@@ -61,7 +67,10 @@ class AtemManager {
           name: input.longName || `Cam ${input.inputId}`,
         };
       })
-      .filter((input) => input.id > 0 && input.id <= 20); // Ajuste o range conforme seu ATEM
+      // Range padrão de câmeras físicas no ATEM Mini/Pro (ajuste se necessário)
+      .filter((input) => input.id >= 1 && input.id <= 20);
+
+    console.log(`[ATEM] ${formattedInputs.length} inputs encontrados.`);
 
     if (this.onInputsReceived) {
       this.onInputsReceived(formattedInputs);
@@ -69,8 +78,15 @@ class AtemManager {
   }
 
   connect(ip) {
-    console.log(`Tentando conectar ao ATEM em: ${ip}`);
+    console.log(`[ATEM] Tentando conectar em: ${ip}`);
     this.atem.connect(ip);
+  }
+
+  // Limpa callbacks — útil ao reconectar sem recriar a instância
+  cleanup() {
+    this.onStateChange = null;
+    this.onInputsReceived = null;
+    this._inputsRefreshed = false;
   }
 }
 

@@ -1,16 +1,6 @@
 const { createClient } = require("@supabase/supabase-js");
 const path = require("path");
-const { app } = require("electron").remote || require("electron"); // Garante acesso ao app
-
-// --- LÓGICA DE AMBIENTE (REFORÇADA) ---
-const isDev = !app.isPackaged;
-
-// // No Electron packegeado, o .env fica em 'resources' se configurado no extraResources
-// const envPath = isDev
-//   ? path.join(__dirname, "../../../.env") // Ajuste conforme a profundidade da pasta
-//   : path.join(process.resourcesPath, ".env");
-
-// require("dotenv").config({ path: envPath });
+const { app } = require("electron");
 
 const SUPABASE_URL = "https://bsufvzxmfxhhxsgiydlw.supabase.co";
 const SUPABASE_ANON_KEY =
@@ -18,14 +8,6 @@ const SUPABASE_ANON_KEY =
 
 class SupabaseProvider {
   constructor() {
-    // Adicionamos um log interno (visível no terminal do VS Code) para debug
-    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-      console.error(
-        "ERRO: Variáveis do Supabase não encontradas no path:",
-        envPath,
-      );
-    }
-
     this.client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     this.currentSession = null;
     this.userId = null;
@@ -41,19 +23,32 @@ class SupabaseProvider {
     return data.user;
   }
 
+  // ---------------------------------------------------------------------------
+  // Reset de Senha
+  // Envia o email de redefinição com redirectTo apontando para a página
+  // /reset-password do frontend Vercel. O Supabase injeta o token na URL
+  // automaticamente como hash fragment (#access_token=...&type=recovery).
+  // ---------------------------------------------------------------------------
+  async resetPassword(email) {
+    const { error } = await this.client.auth.resetPasswordForEmail(email, {
+      redirectTo: "https://tallylight-frontend.vercel.app/reset-password",
+    });
+    if (error) throw error;
+  }
+
   async saveAtemInputs(sessionCode, inputs) {
     if (!this.client || !sessionCode) return;
 
     const { error } = await this.client
       .from("tally_sessions")
       .update({
-        atem_inputs: inputs, // Certifique-se que a coluna no Supabase é do tipo JSONB
+        atem_inputs: inputs,
         updated_at: new Date().toISOString(),
       })
       .eq("session_code", sessionCode);
 
     if (error) {
-      console.error("Erro ao sincronizar inputs com Supabase:", error.message);
+      console.error("[Supabase] Erro ao sincronizar inputs:", error.message);
     }
   }
 
@@ -95,7 +90,7 @@ class SupabaseProvider {
         .update({ is_active: false })
         .eq("session_code", this.currentSession);
     } catch (e) {
-      console.error("Erro ao fechar sessão no Supabase");
+      console.error("[Supabase] Erro ao fechar sessão:", e.message);
     }
   }
 }

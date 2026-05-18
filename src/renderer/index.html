@@ -7,13 +7,60 @@
   </head>
   <body>
     <div id="app">
+      <!-- ================================================================
+        TELA 1: AUTH
+        Contém dois sub-forms que alternam via renderer.js:
+        - #auth-form  → login normal (visível por padrão)
+        - #reset-form → esqueci minha senha (oculto por padrão)
+      ================================================================ -->
       <section id="screen-auth" class="card">
         <h1>Tally <span class="accent">Cloud</span></h1>
-        <input type="email" id="login-email" placeholder="E-mail do Admin" />
-        <input type="password" id="login-pass" placeholder="Senha" />
-        <button id="btn-login">ACESSAR PAINEL</button>
+
+        <!-- Login -->
+        <div id="auth-form" class="auth-form">
+          <div id="auth-inputs" class="input-group">
+            <input
+              type="email"
+              id="login-email"
+              placeholder="E-mail do Admin"
+            />
+            <input type="password" id="login-pass" placeholder="Senha" />
+          </div>
+          <div id="auth-buttons" class="auth-buttons">
+            <button id="btn-forgot" class="btn-text forgot">
+              Esqueci minha senha
+            </button>
+            <button id="btn-login" class="btn-primary">ACESSAR PAINEL</button>
+          </div>
+        </div>
+
+        <!-- Reset de Senha (oculto) -->
+        <div id="reset-form" class="reset-form" style="display: none">
+          <p class="reset-hint">
+            Informe seu e-mail e enviaremos as instruções para redefinir sua
+            senha.
+          </p>
+          <div class="input-group">
+            <input
+              type="email"
+              id="reset-email"
+              placeholder="E-mail do Admin"
+            />
+          </div>
+          <div id="auth-buttons" class="auth-buttons">
+            <button id="btn-send-reset" class="btn-primary">
+              ENVIAR INSTRUÇÕES
+            </button>
+            <button id="btn-back-login" class="btn-text back-to-login">
+              Voltar ao login
+            </button>
+          </div>
+        </div>
       </section>
 
+      <!-- ================================================================
+        TELA 2: CONFIGURAÇÃO
+      ================================================================ -->
       <section id="screen-setup" class="card" style="display: none">
         <h2>Configuração</h2>
         <input
@@ -29,6 +76,9 @@
         <button id="btn-start">INICIAR TRANSMISSÃO</button>
       </section>
 
+      <!-- ================================================================
+        TELA 3: DASHBOARD
+      ================================================================ -->
       <section id="screen-dash" class="card" style="display: none">
         <div class="status-bar">
           <span id="status-atem">ATEM: <b class="off">OFFLINE</b></span>
@@ -50,11 +100,11 @@
           </p>
         </div>
 
-        <button id="btn-stop" class="danger">ENCERRAR SESSÃO</button>
+        <button id="btn-stop" class="btn-stop">ENCERRAR SESSÃO</button>
       </section>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
-    <script src="script.js"></script>
+    <script src="renderer.js"></script>
   </body>
 </html>

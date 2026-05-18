@@ -42,7 +42,30 @@ PRINCIPAIS IMPLEMENTAÇÕES:
 - Gerenciamento de Tray: Execução silenciosa na barra de
   tarefas do Windows para evitar fechamento acidental.
 
-3. COMANDOS DE OPERAÇÃO (NPM)
+3. ESTABILIDADE E CORREÇÕES (v2.0.0)
+
+---
+
+- RACE CONDITION NO SYNC DE INPUTS: O listener de câmeras
+  agora é registrado antes de connectHardware(), garantindo
+  que nenhum evento "inputs-updated" seja perdido mesmo em
+  conexões rápidas.
+- ENCERRAMENTO DE SESSÃO GARANTIDO: before-quit agora aguarda
+  a Promise de stopSession() antes de fechar o processo,
+  evitando sessões presas como is_active: true no banco.
+  O botão "Encerrar" no painel também chama stopSession()
+  explicitamente via IPC antes de recarregar a tela.
+- CANAL IPC UNIFICADO: Comunicação de inputs entre main e
+  renderer padronizada no canal "atem-inputs" (era divergente
+  entre preload e main, causando silêncio no renderer).
+- LISTENERS SEM VAZAMENTO: preload.js usa removeAllListeners()
+  antes de registrar callbacks de status, evitando acúmulo
+  em hot-reload e re-renderizações.
+- REFRESH DE INPUTS CONTROLADO: AtemManager só re-sincroniza
+  nomes de câmeras quando pathKeys indica mudança real em
+  "inputs.*", não a cada corte de vídeo.
+
+4. COMANDOS DE OPERAÇÃO (NPM)
 
 ---
 
@@ -50,7 +73,7 @@ PRINCIPAIS IMPLEMENTAÇÕES:
 - npm run sync-version: Sincroniza a versão entre o core e o front.
 - npm start : Inicia o ambiente de desenvolvimento.
 
-4. REQUISITOS DE SISTEMA
+5. REQUISITOS DE SISTEMA
 
 ---
 
@@ -59,7 +82,7 @@ PRINCIPAIS IMPLEMENTAÇÕES:
   Admin e Wi-Fi estável (ou 4G/5G) para os celulares.
 - Cloud: Projeto configurado no Supabase com Realtime ativado.
 
-5. GUIA DE CAMPO PARA O CINEGRAFISTA
+6. GUIA DE CAMPO PARA O CINEGRAFISTA
 
 ---
 
@@ -72,5 +95,5 @@ PRINCIPAIS IMPLEMENTAÇÕES:
    - CINZA : Standby / Fora do ar.
 
 ============================================================
-"Tally Light: Precisão e agilidade em cada corte."
+🎥 TALLY LIGHT - ATEM BLACKMAGIC (v2.0.0)
 ============================================================

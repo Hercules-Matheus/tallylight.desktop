@@ -8,6 +8,7 @@ body {
   height: 100vh;
   margin: 0;
 }
+
 .card {
   background: #111111;
   padding: 30px;
@@ -15,13 +16,26 @@ body {
   width: 350px;
   display: flex;
   flex-direction: column;
-  gap: 15px;
   text-align: center;
   border: 1px solid #1a1a1a;
 }
 .accent {
   color: #ff1744;
 }
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+}
+
 input {
   padding: 12px;
   background: #080808;
@@ -29,7 +43,15 @@ input {
   color: #ffffff;
   border-radius: 8px;
 }
-button {
+
+.auth-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+.btn-primary {
   padding: 15px;
   background: #ff1744;
   border: none;
@@ -38,30 +60,82 @@ button {
   border-radius: 8px;
   cursor: pointer;
 }
-button.danger {
-  background: #1a1a1a;
+
+.btn-text {
+  display: flex;
+  justify-content: flex-end;
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.btn-text.back-to-login {
+  justify-content: center;
+}
+
+.btn-stop {
+  background: #e8e8e8;
   margin-top: 20px;
 }
+
 #qr-container {
   background: #ffffff;
   padding: 10px;
   border-radius: 10px;
   align-self: center;
+  margin: 5px;
 }
+
 .on {
   color: #00e676;
 }
+
 .off {
   color: #ff1744;
 }
+
 .status-bar {
   font-size: 0.8rem;
   opacity: 0.8;
   display: flex;
   justify-content: space-around;
 }
+
 .session-info h2 {
   letter-spacing: 4px;
   color: #ff1744;
   margin: 5px 0;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 14px;
+  margin-top: 6px;
+  padding: 4px 0;
+  text-align: center;
+  width: 100%;
+}
+
+.btn-link:hover {
+  color: #ccc;
+}
+
+.reset-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.reset-hint {
+  color: #999;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0 0 8px;
+  text-align: center;
 }

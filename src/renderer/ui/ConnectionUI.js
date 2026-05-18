@@ -4,8 +4,12 @@ const ConnectionUI = {
     const sessionCode = document.getElementById("session-code").value;
 
     const result = await window.api.startTransmission({ atemIp, sessionCode });
-    if (result.success) {
-      DashboardUI.render(sessionCode);
+    try {
+      if (result.success) {
+        DashboardUI.render(sessionCode);
+      }
+    } catch (error) {
+      console.error("Erro ao iniciar transmissão:", error);
     }
   },
 };
