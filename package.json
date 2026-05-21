@@ -5,7 +5,7 @@
   "author": "Hercules",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
+    "dev": "electron .",
     "clean": "rimraf dist",
     "build-app": "electron-builder",
     "release": "npm run clean && npm run build-app"

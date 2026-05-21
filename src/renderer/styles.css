@@ -61,6 +61,10 @@ input {
   cursor: pointer;
 }
 
+#screen-setup .btn-primary {
+  margin: 5px;
+}
+
 .btn-text {
   display: flex;
   justify-content: flex-end;

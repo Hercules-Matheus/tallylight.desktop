@@ -7,35 +7,57 @@
   </head>
   <body>
     <div id="app">
-      <!-- ================================================================
-        TELA 1: AUTH
-        Contém dois sub-forms que alternam via renderer.js:
-        - #auth-form  → login normal (visível por padrão)
-        - #reset-form → esqueci minha senha (oculto por padrão)
-      ================================================================ -->
       <section id="screen-auth" class="card">
         <h1>Tally <span class="accent">Cloud</span></h1>
 
-        <!-- Login -->
-        <div id="auth-form" class="auth-form">
-          <div id="auth-inputs" class="input-group">
+        <form
+          id="auth-form"
+          class="auth-form"
+          onsubmit="event.preventDefault()"
+        >
+          <div class="input-group">
             <input
               type="email"
               id="login-email"
               placeholder="E-mail do Admin"
+              tabindex="1"
+              autofocus
+              required
             />
-            <input type="password" id="login-pass" placeholder="Senha" />
+            <input
+              type="password"
+              id="login-pass"
+              placeholder="Senha"
+              tabindex="2"
+              required
+            />
           </div>
-          <div id="auth-buttons" class="auth-buttons">
-            <button id="btn-forgot" class="btn-text forgot">
+          <div class="auth-buttons">
+            <button
+              type="button"
+              id="btn-forgot"
+              class="btn-text forgot"
+              tabindex="4"
+            >
               Esqueci minha senha
             </button>
-            <button id="btn-login" class="btn-primary">ACESSAR PAINEL</button>
+            <button
+              type="submit"
+              id="btn-login"
+              class="btn-primary"
+              tabindex="3"
+            >
+              ACESSAR PAINEL
+            </button>
           </div>
-        </div>
+        </form>
 
-        <!-- Reset de Senha (oculto) -->
-        <div id="reset-form" class="reset-form" style="display: none">
+        <form
+          id="reset-form"
+          class="reset-form"
+          style="display: none"
+          onsubmit="event.preventDefault()"
+        >
           <p class="reset-hint">
             Informe seu e-mail e enviaremos as instruções para redefinir sua
             senha.
@@ -45,40 +67,57 @@
               type="email"
               id="reset-email"
               placeholder="E-mail do Admin"
+              tabindex="1"
+              required
             />
           </div>
-          <div id="auth-buttons" class="auth-buttons">
-            <button id="btn-send-reset" class="btn-primary">
+          <div class="reset-buttons">
+            <button
+              type="submit"
+              id="btn-send-reset"
+              class="btn-primary"
+              tabindex="2"
+            >
               ENVIAR INSTRUÇÕES
             </button>
-            <button id="btn-back-login" class="btn-text back-to-login">
+            <button
+              type="button"
+              id="btn-back-login"
+              class="btn-text back-to-login"
+              tabindex="3"
+            >
               Voltar ao login
             </button>
           </div>
-        </div>
+        </form>
       </section>
 
-      <!-- ================================================================
-        TELA 2: CONFIGURAÇÃO
-      ================================================================ -->
       <section id="screen-setup" class="card" style="display: none">
         <h2>Configuração</h2>
-        <input
-          type="text"
-          id="atem-ip"
-          placeholder="IP do ATEM (ex: 192.168.1.50)"
-        />
-        <input
-          type="text"
-          id="session-code"
-          placeholder="Código da Sala (ex: SALA-01)"
-        />
-        <button id="btn-start">INICIAR TRANSMISSÃO</button>
+        <form id="setup-form" onsubmit="event.preventDefault()">
+          <div class="input-group">
+            <input
+              type="text"
+              id="atem-ip"
+              placeholder="IP do ATEM (ex: 192.168.1.50)"
+              tabindex="1"
+              required
+            />
+            <input
+              type="text"
+              id="session-code"
+              placeholder="Código da Sala (ex: SALA-01)"
+              tabindex="2"
+              required
+            />
+          </div>
+
+          <button type="submit" id="btn-start" class="btn-primary" tabindex="3">
+            INICIAR TRANSMISSÃO
+          </button>
+        </form>
       </section>
 
-      <!-- ================================================================
-        TELA 3: DASHBOARD
-      ================================================================ -->
       <section id="screen-dash" class="card" style="display: none">
         <div class="status-bar">
           <span id="status-atem">ATEM: <b class="off">OFFLINE</b></span>
@@ -100,7 +139,7 @@
           </p>
         </div>
 
-        <button id="btn-stop" class="btn-stop">ENCERRAR SESSÃO</button>
+        <button id="btn-stop" class="btn-primary">ENCERRAR SESSÃO</button>
       </section>
     </div>
 
