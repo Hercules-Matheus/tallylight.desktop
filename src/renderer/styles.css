@@ -51,6 +51,13 @@ input {
   width: 100%;
 }
 
+.reset-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
 .btn-primary {
   padding: 15px;
   background: #ff1744;

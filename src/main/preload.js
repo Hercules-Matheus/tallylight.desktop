@@ -1,9 +1,8 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
-// Helper para registrar listeners IPC de forma segura,
-// evitando acúmulo de listeners em hot-reload / re-renderizações.
+// Remove listener anterior antes de registrar novo — evita acúmulo em
+// re-renderizações e hot-reload.
 function safeOn(channel, callback) {
-  // Remove listener anterior do mesmo canal antes de adicionar
   ipcRenderer.removeAllListeners(channel);
   ipcRenderer.on(channel, (_event, value) => callback(value));
 }
@@ -21,11 +20,9 @@ contextBridge.exposeInMainWorld("api", {
     ipcRenderer.invoke("app:start-transmission", data),
   stopTransmission: () => ipcRenderer.invoke("app:stop-transmission"),
 
-  // --- Listeners de status (ATEM online/offline) ---
-  // Corrigido: era .on acumulativo; agora remove o anterior antes de registrar.
+  // --- Main → Renderer ---
   onStatusUpdate: (callback) => safeOn("status-update", callback),
-
-  // --- Listener de inputs do ATEM (câmeras sincronizadas) ---
-  // NOVO: estava faltando no preload original, causando erro silencioso no renderer.
   onAtemInputs: (callback) => safeOn("atem-inputs", callback),
+  onPeerInit: (callback) => safeOn("peer-init", callback), // main pede para inicializar PeerJS
+  onTallyUpdate: (callback) => safeOn("tally-update", callback), // main repassa cortes do ATEM
 });

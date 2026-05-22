@@ -1,23 +1,22 @@
 const { Atem } = require("atem-connection");
 const store = require("./StateStore");
 
+const TALLY_DEBOUNCE_MS = 300;
+
 class AtemManager {
   constructor() {
     this.atem = new Atem();
-    this.onStateChange = null;
     this.onInputsReceived = null;
-
-    // Flag para evitar refreshInputs redundante durante stateChanged.
-    // stateChanged dispara para qualquer mudança (corte, áudio, etc).
-    // Sem esse controle, sincronizávamos inputs com Supabase a cada corte.
     this._inputsRefreshed = false;
+    this._tallyDebounceTimer = null;
+    this._transitionInProgress = false;
 
     this.atem.on("connected", () => {
       console.log("[ATEM] Conectado!");
       store.setAtemStatus(true);
       this._inputsRefreshed = false;
+      this._transitionInProgress = false;
 
-      // Aguarda o estado completo ser populado antes de ler inputs
       setTimeout(() => {
         this.refreshInputs();
         this._inputsRefreshed = true;
@@ -28,29 +27,64 @@ class AtemManager {
       console.log("[ATEM] Desconectado!");
       store.setAtemStatus(false);
       this._inputsRefreshed = false;
+      this._transitionInProgress = false;
+      if (this._tallyDebounceTimer) {
+        clearTimeout(this._tallyDebounceTimer);
+        this._tallyDebounceTimer = null;
+      }
     });
 
     this.atem.on("stateChanged", (state, pathKeys) => {
-      // 1. Refresh de inputs APENAS se ainda não foi feito após a conexão,
-      //    ou se o pathKeys indicar mudança explícita nos inputs.
-      //    Antes: qualquer stateChanged com state.inputs disparava refreshInputs.
+      // 1. Refresh de inputs só quando há mudança real
       const inputsChanged =
         pathKeys && pathKeys.some((k) => k.startsWith("inputs."));
-
       if (inputsChanged && this.onInputsReceived) {
-        this._inputsRefreshed = false; // Força re-leitura
+        this._inputsRefreshed = false;
         this.refreshInputs();
       }
 
-      // 2. Mudanças de corte (Program / Preview)
-      if (state.video && state.video.mixEffects) {
-        const me = state.video.mixEffects[0];
-        if (me && this.onStateChange) {
-          this.onStateChange({
-            program: me.programInput,
-            preview: me.previewInput,
-          });
-        }
+      // 2. Tally com debounce robusto para cortes, autos e dissolves manuais
+      const me = state.video?.mixEffects?.[0];
+      if (!me) return;
+
+      const tallyChanged =
+        pathKeys &&
+        pathKeys.some(
+          (k) =>
+            k.startsWith("video.mixEffects.0.programInput") ||
+            k.startsWith("video.mixEffects.0.previewInput") ||
+            k.startsWith("video.mixEffects.0.transitionPosition")
+        );
+
+      if (!tallyChanged) return;
+
+      if (this._tallyDebounceTimer) {
+        clearTimeout(this._tallyDebounceTimer);
+        this._tallyDebounceTimer = null;
+      }
+
+      const position = me.transitionPosition ?? 0;
+      const isTransitioning = position > 0 && position < 9999;
+      const program = me.programInput;
+      const preview = me.previewInput;
+
+      if (!isTransitioning) {
+        // Hard cut ou transição concluída
+        this._transitionInProgress = false;
+        this._tallyDebounceTimer = setTimeout(() => {
+          this._tallyDebounceTimer = null;
+          console.log(`[ATEM] Tally → program:${program} preview:${preview}`);
+          store.setTally({ program, preview });
+        }, TALLY_DEBOUNCE_MS);
+      } else {
+        // Dissolve em progresso — aguarda estabilizar
+        this._transitionInProgress = true;
+        this._tallyDebounceTimer = setTimeout(() => {
+          this._tallyDebounceTimer = null;
+          this._transitionInProgress = false;
+          console.log(`[ATEM] Dissolve parado → program:${program} preview:${preview}`);
+          store.setTally({ program, preview });
+        }, 800);
       }
     });
   }
@@ -67,26 +101,27 @@ class AtemManager {
           name: input.longName || `Cam ${input.inputId}`,
         };
       })
-      // Range padrão de câmeras físicas no ATEM Mini/Pro (ajuste se necessário)
       .filter((input) => input.id >= 1 && input.id <= 20);
 
     console.log(`[ATEM] ${formattedInputs.length} inputs encontrados.`);
-
     if (this.onInputsReceived) {
       this.onInputsReceived(formattedInputs);
     }
   }
 
   connect(ip) {
-    console.log(`[ATEM] Tentando conectar em: ${ip}`);
+    console.log(`[ATEM] Conectando em: ${ip}`);
     this.atem.connect(ip);
   }
 
-  // Limpa callbacks — útil ao reconectar sem recriar a instância
   cleanup() {
-    this.onStateChange = null;
+    if (this._tallyDebounceTimer) {
+      clearTimeout(this._tallyDebounceTimer);
+      this._tallyDebounceTimer = null;
+    }
     this.onInputsReceived = null;
     this._inputsRefreshed = false;
+    this._transitionInProgress = false;
   }
 }
 

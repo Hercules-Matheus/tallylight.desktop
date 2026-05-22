@@ -9,20 +9,16 @@ const {
 const path = require("path");
 const fs = require("fs");
 
-// --- CONFIGURAÇÃO DE AMBIENTE ---
 const isDev = !app.isPackaged;
 const envPath = isDev
   ? path.join(__dirname, ".env")
   : path.join(process.resourcesPath, ".env");
-
 require("dotenv").config({ path: envPath });
 
-// --- IMPORTAÇÃO DE MÓDULOS INTERNOS ---
-const orchestrator = require("./src/main/index");
+const orchestrator = require("./src/main/Orchestrator");
 const store = require("./src/main/core/StateStore");
 const cloud = require("./src/main/providers/SupabaseProvider");
 
-// Variáveis Globais (declaradas aqui para evitar Garbage Collection)
 let mainWindow = null;
 let tray = null;
 let isQuitting = false;
@@ -38,10 +34,10 @@ function getUserData() {
     try {
       return JSON.parse(fs.readFileSync(configPath));
     } catch (e) {
-      console.error("[Config] Erro ao ler config.json, resetando...");
+      console.error("[Config] Erro ao ler config.json");
     }
   }
-  return { atemIp: "127.0.0.1", sessionCode: "" };
+  return { atemIp: "127.0.0.1" };
 }
 
 function sendToRenderer(channel, payload) {
@@ -71,7 +67,6 @@ function createWindow() {
 
   mainWindow.loadFile(path.join(__dirname, "src/renderer/index.html"));
 
-  // No Windows, fechar a janela apenas esconde para a Tray
   mainWindow.on("close", (event) => {
     if (!isQuitting) {
       event.preventDefault();
@@ -101,9 +96,8 @@ function createTray() {
     },
   ]);
 
-  tray.setToolTip("Tally Cloud Admin - Operacional");
+  tray.setToolTip("Tally Cloud Admin");
   tray.setContextMenu(contextMenu);
-
   tray.on("click", () => {
     if (mainWindow.isVisible()) {
       mainWindow.hide();
@@ -129,8 +123,6 @@ ipcMain.handle("auth:login", async (_, { email, password }) => {
 });
 
 // 2. Reset de senha
-// Chama resetPasswordForEmail() no Supabase. O usuário receberá um email
-// com link para https://tallylight-frontend.vercel.app/reset-password
 ipcMain.handle("auth:reset-password", async (_, email) => {
   try {
     await cloud.resetPassword(email);
@@ -143,40 +135,36 @@ ipcMain.handle("auth:reset-password", async (_, email) => {
 // 3. Configurações salvas
 ipcMain.handle("get-config", () => getUserData());
 
-// 3. Iniciar transmissão ATEM → Cloud
+// 4. Iniciar transmissão
+//    Fluxo: salva config → conecta ATEM → manda "peer-init" ao renderer
+//    O renderer inicializa o PeerJS (WebRTC nativo do Chromium) e confirma
+//    via "peer:ready". A partir daí, tally-changed → webContents.send →
+//    renderer → peerProvider.broadcast() → celulares.
 ipcMain.handle("app:start-transmission", async (_, { atemIp, sessionCode }) => {
   try {
-    // Persiste config local
-    fs.writeFileSync(
-      configPath,
-      JSON.stringify({ atemIp, sessionCode }, null, 2)
-    );
+    fs.writeFileSync(configPath, JSON.stringify({ atemIp }, null, 2));
 
-    // Inicia sessão no Supabase
-    await cloud.startSession(sessionCode);
-
-    // Registra o listener de inputs ANTES de conectar, e remove após o primeiro
-    // disparo para não acumular. Usa wrapper nomeado para poder remover com segurança.
-    //
-    // CORREÇÃO: antes usava .once() registrado DEPOIS do connectHardware,
-    // o que criava uma race condition se o ATEM conectasse rapidamente.
-    // Agora o listener é registrado primeiro, e o cleanup é explícito.
-    const onInputs = async (inputs) => {
-      orchestrator.off("inputs-updated", onInputs); // cleanup manual e seguro
-
-      console.log(`[Main] ${inputs.length} câmeras recebidas, enviando para a nuvem...`);
-      await cloud.saveAtemInputs(sessionCode, inputs);
-
-      // CORREÇÃO: canal era "atem-inputs-data" aqui mas preload ouvia "atem-inputs".
-      // Agora ambos usam "atem-inputs".
+    // Listener de inputs: renderer exibe contagem e os celulares recebem
+    // via PeerJS logo após conectar (PeerProvider envia _lastInputs ao abrir canal)
+    const onInputs = (inputs) => {
+      orchestrator.off("inputs-updated", onInputs);
+      console.log(`[Main] ${inputs.length} câmeras recebidas.`);
       sendToRenderer("atem-inputs", inputs);
     };
-
     orchestrator.on("inputs-updated", onInputs);
 
-    // Conecta ao hardware e inicia fluxo de cortes
+    // Conecta hardware e inicia fluxo de tally
     orchestrator.connectHardware(atemIp);
-    orchestrator.startTallyFlow(sessionCode);
+    orchestrator.startTallyFlow();
+
+    // Repassa cada corte ao renderer para broadcast P2P
+    orchestrator.removeAllListeners("tally-changed");
+    orchestrator.on("tally-changed", (data) => {
+      sendToRenderer("tally-update", data);
+    });
+
+    // Pede ao renderer para inicializar o PeerJS com o session code
+    sendToRenderer("peer-init", { sessionCode });
 
     return { success: true };
   } catch (error) {
@@ -185,15 +173,10 @@ ipcMain.handle("app:start-transmission", async (_, { atemIp, sessionCode }) => {
   }
 });
 
-// 4. Parar transmissão (chamado pelo btn-stop no renderer)
-//
-// CORREÇÃO: esse handler não existia. O renderer chamava window.location.reload()
-// diretamente, deixando a sessão como is_active: true no Supabase em caso de
-// crash ou fechamento pelo tray.
+// 5. Parar transmissão
 ipcMain.handle("app:stop-transmission", async () => {
   try {
-    await cloud.stopSession();
-    orchestrator.cleanup?.(); // limpa callbacks do AtemManager se disponível
+    orchestrator.cleanup();
     return { success: true };
   } catch (error) {
     console.error("[Main] Erro ao parar transmissão:", error);
@@ -210,7 +193,7 @@ store.on("statusChange", (online) => {
 });
 
 // ---------------------------------------------------------------------------
-// Ciclo de vida do app
+// Ciclo de vida
 // ---------------------------------------------------------------------------
 
 app.whenReady().then(() => {
@@ -222,20 +205,15 @@ app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
 
-// CORREÇÃO: before-quit com async não aguarda a Promise — o Electron sai antes
-// do stopSession completar. O padrão correto é: prevenir o quit, aguardar a
-// Promise e só então chamar app.quit() de novo com isQuitting = true.
 app.on("before-quit", async (event) => {
-  if (isQuitting) return; // segunda passagem: deixa sair
+  if (isQuitting) return;
   event.preventDefault();
   isQuitting = true;
-
   try {
-    await cloud.stopSession();
-    console.log("[Main] Sessão encerrada com sucesso.");
+    orchestrator.cleanup();
   } catch (e) {
-    console.error("[Main] Erro ao encerrar sessão:", e.message);
+    console.error("[Main] Erro no cleanup:", e.message);
   } finally {
-    app.quit(); // agora sai de verdade (isQuitting = true, não vai entrar aqui de novo)
+    app.quit();
   }
 });

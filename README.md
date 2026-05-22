@@ -35,14 +35,14 @@ PRINCIPAIS IMPLEMENTAÇÕES:
 
 - Latência: Reduzida para <100ms via WebSockets e
   Supabase Realtime.
-- Persistência Local: IP e Sessão salvos automaticamente
+- Persistência Local: IP salvo automaticamente
   em %AppData%/config.json.
 - Locução de Voz: Avisos automáticos de status ("No Ar",
   "Preview") para operação sem necessidade de olhar a tela.
 - Gerenciamento de Tray: Execução silenciosa na barra de
   tarefas do Windows para evitar fechamento acidental.
 
-3. ESTABILIDADE E CORREÇÕES (v2.0.0)
+1. ESTABILIDADE E CORREÇÕES (v2.0.0)
 
 ---
 
@@ -71,7 +71,7 @@ PRINCIPAIS IMPLEMENTAÇÕES:
 
 - npm run release : [MASTER] Limpa, compila e gera o .exe final.
 - npm run sync-version: Sincroniza a versão entre o core e o front.
-- npm start : Inicia o ambiente de desenvolvimento.
+- npm run dev : Inicia o ambiente de desenvolvimento.
 
 5. REQUISITOS DE SISTEMA
 
@@ -80,15 +80,15 @@ PRINCIPAIS IMPLEMENTAÇÕES:
 - Hardware: Switchers Blackmagic ATEM (Todos os modelos).
 - Rede: Conexão via cabo (Ethernet) recomendada para o PC
   Admin e Wi-Fi estável (ou 4G/5G) para os celulares.
-- Cloud: Projeto configurado no Supabase com Realtime ativado.
+- Cloud: Projeto configurado com PeerJS.
 
 6. GUIA DE CAMPO PARA O CINEGRAFISTA
 
 ---
 
 1. Escaneie o QR Code no painel do Admin.
-2. Clique em "ATIVAR MODO PRODUÇÃO" (Libera som e trava a tela).
-3. Escolha sua câmera no Grid (ex: CAM 01).
+2. Clique em "ENTRAR NA SESSÃO" (Libera som e trava a tela).
+3. Escolha sua câmera no select (ex: CAM 01).
 4. Cores de Sinalização:
    - VERMELHO : Você está no ar (PROGRAM).
    - VERDE : Você é a próxima câmera (PREVIEW).

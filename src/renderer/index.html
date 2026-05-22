@@ -4,6 +4,18 @@
     <meta charset="UTF-8" />
     <link rel="stylesheet" href="styles.css" />
     <title>Tally Cloud Admin</title>
+
+    <!-- CSP: scripts locais + unsafe-eval (requerido pelo PeerJS internamente)
+         connect-src: Supabase (auth) + peerjs.com (sinalização WebRTC) -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self';
+               script-src 'self' 'unsafe-eval';
+               connect-src 'self'
+                 https://*.supabase.co wss://*.supabase.co
+                 https://0.peerjs.com wss://0.peerjs.com;
+               style-src 'self' 'unsafe-inline';"
+    />
   </head>
   <body>
     <div id="app">
@@ -103,13 +115,6 @@
               tabindex="1"
               required
             />
-            <input
-              type="text"
-              id="session-code"
-              placeholder="Código da Sala (ex: SALA-01)"
-              tabindex="2"
-              required
-            />
           </div>
 
           <button type="submit" id="btn-start" class="btn-primary" tabindex="3">
@@ -143,7 +148,11 @@
       </section>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <!-- Scripts locais: evitam bloqueio CSP e funcionam offline no .exe -->
+    <!-- Ordem obrigatória: qrcode → peerjs → PeerProvider → renderer     -->
+    <script src="qrcode.min.js"></script>
+    <script src="peerjs.min.js"></script>
+    <script src="PeerProvider.js"></script>
     <script src="renderer.js"></script>
   </body>
 </html>
