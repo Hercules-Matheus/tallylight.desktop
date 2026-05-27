@@ -17,7 +17,6 @@ require("dotenv").config({ path: envPath });
 
 const orchestrator = require("./src/main/Orchestrator");
 const store = require("./src/main/core/StateStore");
-const cloud = require("./src/main/providers/SupabaseProvider");
 
 let mainWindow = null;
 let tray = null;
@@ -112,30 +111,10 @@ function createTray() {
 // IPC Handlers
 // ---------------------------------------------------------------------------
 
-// 1. Login
-ipcMain.handle("auth:login", async (_, { email, password }) => {
-  try {
-    const user = await cloud.login(email, password);
-    return { success: true, user };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-});
-
-// 2. Reset de senha
-ipcMain.handle("auth:reset-password", async (_, email) => {
-  try {
-    await cloud.resetPassword(email);
-    return { success: true };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-});
-
-// 3. Configurações salvas
+// 1. Configurações salvas
 ipcMain.handle("get-config", () => getUserData());
 
-// 4. Iniciar transmissão
+// 2. Iniciar transmissão
 //    Fluxo: salva config → conecta ATEM → manda "peer-init" ao renderer
 //    O renderer inicializa o PeerJS (WebRTC nativo do Chromium) e confirma
 //    via "peer:ready". A partir daí, tally-changed → webContents.send →
@@ -173,7 +152,7 @@ ipcMain.handle("app:start-transmission", async (_, { atemIp, sessionCode }) => {
   }
 });
 
-// 5. Parar transmissão
+// 3. Parar transmissão
 ipcMain.handle("app:stop-transmission", async () => {
   try {
     orchestrator.cleanup();

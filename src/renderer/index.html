@@ -12,98 +12,12 @@
       content="default-src 'self';
                script-src 'self' 'unsafe-eval';
                connect-src 'self'
-                 https://*.supabase.co wss://*.supabase.co
                  https://0.peerjs.com wss://0.peerjs.com;
                style-src 'self' 'unsafe-inline';"
     />
   </head>
   <body>
     <div id="app">
-      <section id="screen-auth" class="card">
-        <h1>Tally <span class="accent">Cloud</span></h1>
-
-        <form
-          id="auth-form"
-          class="auth-form"
-          onsubmit="event.preventDefault()"
-        >
-          <div class="input-group">
-            <input
-              type="email"
-              id="login-email"
-              placeholder="E-mail do Admin"
-              tabindex="1"
-              autofocus
-              required
-            />
-            <input
-              type="password"
-              id="login-pass"
-              placeholder="Senha"
-              tabindex="2"
-              required
-            />
-          </div>
-          <div class="auth-buttons">
-            <button
-              type="button"
-              id="btn-forgot"
-              class="btn-text forgot"
-              tabindex="4"
-            >
-              Esqueci minha senha
-            </button>
-            <button
-              type="submit"
-              id="btn-login"
-              class="btn-primary"
-              tabindex="3"
-            >
-              ACESSAR PAINEL
-            </button>
-          </div>
-        </form>
-
-        <form
-          id="reset-form"
-          class="reset-form"
-          style="display: none"
-          onsubmit="event.preventDefault()"
-        >
-          <p class="reset-hint">
-            Informe seu e-mail e enviaremos as instruções para redefinir sua
-            senha.
-          </p>
-          <div class="input-group">
-            <input
-              type="email"
-              id="reset-email"
-              placeholder="E-mail do Admin"
-              tabindex="1"
-              required
-            />
-          </div>
-          <div class="reset-buttons">
-            <button
-              type="submit"
-              id="btn-send-reset"
-              class="btn-primary"
-              tabindex="2"
-            >
-              ENVIAR INSTRUÇÕES
-            </button>
-            <button
-              type="button"
-              id="btn-back-login"
-              class="btn-text back-to-login"
-              tabindex="3"
-            >
-              Voltar ao login
-            </button>
-          </div>
-        </form>
-      </section>
-
       <section id="screen-setup" class="card" style="display: none">
         <h2>Configuração</h2>
         <form id="setup-form" onsubmit="event.preventDefault()">
@@ -116,7 +30,6 @@
               required
             />
           </div>
-
           <button type="submit" id="btn-start" class="btn-primary" tabindex="3">
             INICIAR TRANSMISSÃO
           </button>
@@ -128,11 +41,9 @@
           <span id="status-atem">ATEM: <b class="off">OFFLINE</b></span>
           <span id="status-cloud">CLOUD: <b class="on">ONLINE</b></span>
         </div>
-
         <div id="qr-container">
           <canvas id="qr-canvas"></canvas>
         </div>
-
         <div class="session-info">
           <p>CÓDIGO DA SESSÃO:</p>
           <h2 id="display-session">----</h2>
@@ -143,7 +54,6 @@
             Aguardando câmeras...
           </p>
         </div>
-
         <button id="btn-stop" class="btn-primary">ENCERRAR SESSÃO</button>
       </section>
     </div>

@@ -82,10 +82,6 @@ input {
   font-size: 14px;
 }
 
-.btn-text.back-to-login {
-  justify-content: center;
-}
-
 .btn-stop {
   background: #e8e8e8;
   margin-top: 20px;
