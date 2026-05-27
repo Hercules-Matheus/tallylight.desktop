@@ -4,7 +4,6 @@
 
 const AppNavigation = {
   screens: {
-    auth: document.getElementById("screen-auth"),
     setup: document.getElementById("screen-setup"),
     dash: document.getElementById("screen-dash"),
   },
@@ -35,90 +34,6 @@ const AppNavigation = {
     });
   },
 };
-
-// ---------------------------------------------------------------------------
-// Alternância entre auth-form e reset-form
-// ---------------------------------------------------------------------------
-
-function switchAuthForm(showId, hideId, focusSelector) {
-  if (document.activeElement && document.activeElement !== document.body) {
-    document.activeElement.blur();
-  }
-  document.getElementById(hideId).style.display = "none";
-  document.getElementById(showId).style.display = "flex";
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      const el = document.querySelector(focusSelector);
-      if (el) el.focus();
-    });
-  });
-}
-
-document.getElementById("btn-forgot").addEventListener("click", () => {
-  switchAuthForm("reset-form", "auth-form", "#reset-email");
-});
-
-document.getElementById("btn-back-login").addEventListener("click", () => {
-  switchAuthForm("auth-form", "reset-form", "#login-email");
-});
-
-// ---------------------------------------------------------------------------
-// Reset de senha
-// ---------------------------------------------------------------------------
-
-document
-  .getElementById("btn-send-reset")
-  .addEventListener("click", async () => {
-    const email = document.getElementById("reset-email").value.trim();
-    const btn = document.getElementById("btn-send-reset");
-
-    if (!email) return (status.innerText = "Informe o e-mail cadastrado.");
-
-    btn.disabled = true;
-    btn.innerText = "Enviando...";
-    status.innerText = "";
-
-    const res = await window.api.resetPassword(email);
-
-    if (res.success) {
-      status.style.color = "#4caf50";
-      status.innerText =
-        "Se este e-mail estiver cadastrado, você receberá as instruções em breve.";
-      btn.innerText = "E-mail Enviado";
-    } else {
-      status.style.color = "#e53935";
-      status.innerText = "Erro: " + res.error;
-      btn.disabled = false;
-      btn.innerText = "ENVIAR INSTRUÇÕES";
-    }
-  });
-
-// ---------------------------------------------------------------------------
-// Login
-// ---------------------------------------------------------------------------
-
-document.getElementById("btn-login").addEventListener("click", async () => {
-  const email = document.getElementById("login-email").value;
-  const pass = document.getElementById("login-pass").value;
-  const btn = document.getElementById("btn-login");
-
-  if (!email || !pass) return alert("Preencha todos os campos!");
-
-  btn.disabled = true;
-  btn.innerText = "Verificando...";
-
-  const res = await window.api.login({ email, password: pass });
-
-  if (res.success) {
-    const config = await window.api.getConfig();
-    document.getElementById("atem-ip").value = config.atemIp || "";
-    AppNavigation.goTo("setup");
-  } else {
-    alert("Erro: " + res.error);
-    btn.disabled = false;
-    btn.innerText = "ACESSAR PAINEL";
-  }
-});
 
 // ---------------------------------------------------------------------------
 // Iniciar Transmissão
