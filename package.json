@@ -25,11 +25,25 @@
     ],
     "win": {
       "target": [
-        "portable",
-        "nsis"
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        },
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
       ],
-      "icon": "assets/icon.ico",
-      "artifactName": "TallyLightCloud-Windows.${ext}"
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "artifactName": "TallyLightCloud-Windows-Installer.${ext}"
+    },
+    "portable": {
+      "artifactName": "TallyLightCloud-Windows-Portable.${ext}"
     },
     "linux": {
       "target": [
