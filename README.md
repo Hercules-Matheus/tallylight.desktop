@@ -1,99 +1,52 @@
-============================================================
-🎥 TALLY LIGHT - ATEM BLACKMAGIC (v2.0.0)
-============================================================
-Desenvolvido por: Hercules Matheus (2026)
-Status: Versão Estável de Produção
+# 🎥 Tally Light Cloud - ATEM Blackmagic
 
-1. O SALTO PARA A VERSÃO 2.0.0 (MAJOR UPDATE)
+[Português](#-português) | [English](#-english)
 
 ---
 
-A versão 2.0.0 marca a maturidade do sistema, focando em
-estabilidade de rede, UX intuitiva e sincronização total
-entre o hardware físico e a nuvem.
+## 🇧🇷 Português
 
-PRINCIPAIS IMPLEMENTAÇÕES:
+O **Tally Light Cloud** é uma solução Open Source leve e eficiente desenvolvida em Electron que transforma qualquer smartphone, tablet ou dispositivo móvel em um Tally Light profissional para mesas de corte da linha Blackmagic ATEM.
 
-- ARQUITETURA EVENT-DRIVEN: Orchestrator reescrito como
-  EventEmitter para eliminar erros de sincronia e funções
-  indefinidas.
-- GRID DE SELEÇÃO DINÂMICA: Substituição total do seletor
-  'select' por uma interface de botões (Grid) no celular,
-  resolvendo problemas de visibilidade e legibilidade.
-- SYNC AUTOMÁTICO DE LABELS: Nomes das câmeras definidos no
-  ATEM Software Control são enviados via JSONB para o
-  Supabase e refletidos nos botões dos cinegrafistas.
-- SEGURANÇA RLS CONSOLIDADA: Políticas de Row Level Security
-  (INSERT/UPDATE) ajustadas para permitir upserts seguros
-  vinculados ao ID do administrador.
-- PRODUÇÃO "ONE-CLICK": Ativação simultânea de NoSleep,
-  Audio Context e Tally Flow ao entrar na sessão.
+Utilizando uma arquitetura descentralizada via **PeerJS (WebRTC)**, o sistema elimina a necessidade de bancos de dados em nuvem, enviando sinais de corte e nomes de câmeras em tempo real diretamente do painel administrador para os dispositivos dos cinegrafistas com latência inferior a 100ms.
 
-2. NOVIDADES TÉCNICAS
+### 💡 Apoie o Projeto (Donate)
+
+Este software é desenvolvido de forma independente e distribuído gratuitamente. Se ele te ajudou a economizar no setup da sua transmissão ou trouxe praticidade para o seu estúdio/igreja, considere apoiar o desenvolvimento:
+
+- **Contribua via** [Buy Me a Coffee](https://www.buymeacoffee.com/herculesmatheus) _(Aceita cartões internacionais, Apple Pay e Google Pay)._
+
+### 🚀 Como Usar
+
+1. Vá até a aba **Releases** deste repositório e baixe o executável para o seu sistema operacional.
+2. Abra o aplicativo no computador que está na mesma rede do seu switcher ATEM.
+3. Insira o IP do ATEM para conectar o hardware.
+4. Peça para os cinegrafistas escanearem o QR Code gerado na tela, acessarem a sessão e selecionarem sua respectiva câmera no seletor.
 
 ---
 
-- Latência: Reduzida para <100ms via WebSockets e
-  Supabase Realtime.
-- Persistência Local: IP salvo automaticamente
-  em %AppData%/config.json.
-- Locução de Voz: Avisos automáticos de status ("No Ar",
-  "Preview") para operação sem necessidade de olhar a tela.
-- Gerenciamento de Tray: Execução silenciosa na barra de
-  tarefas do Windows para evitar fechamento acidental.
+## 🇺🇸 English
 
-1. ESTABILIDADE E CORREÇÕES (v2.0.0)
+**Tally Light Cloud** is a lightweight, open-source Electron application that transforms any smartphone, tablet, or mobile device into a professional Tally Light for Blackmagic ATEM video switchers.
 
----
+Powered by a decentralized **PeerJS (WebRTC)** architecture, the system operates completely independent of cloud databases. It streams tally signaling and live camera labels straight from the admin dashboard to the camera operators' screens with sub-100ms latency.
 
-- RACE CONDITION NO SYNC DE INPUTS: O listener de câmeras
-  agora é registrado antes de connectHardware(), garantindo
-  que nenhum evento "inputs-updated" seja perdido mesmo em
-  conexões rápidas.
-- ENCERRAMENTO DE SESSÃO GARANTIDO: before-quit agora aguarda
-  a Promise de stopSession() antes de fechar o processo,
-  evitando sessões presas como is_active: true no banco.
-  O botão "Encerrar" no painel também chama stopSession()
-  explicitamente via IPC antes de recarregar a tela.
-- CANAL IPC UNIFICADO: Comunicação de inputs entre main e
-  renderer padronizada no canal "atem-inputs" (era divergente
-  entre preload e main, causando silêncio no renderer).
-- LISTENERS SEM VAZAMENTO: preload.js usa removeAllListeners()
-  antes de registrar callbacks de status, evitando acúmulo
-  em hot-reload e re-renderizações.
-- REFRESH DE INPUTS CONTROLADO: AtemManager só re-sincroniza
-  nomes de câmeras quando pathKeys indica mudança real em
-  "inputs.*", não a cada corte de vídeo.
+### 💡 Support the Project
 
-4. COMANDOS DE OPERAÇÃO (NPM)
+This software is independently developed and distributed entirely for free. If it saved you hardware costs or upgraded your live production setup, please consider supporting the project:
+
+- **Support via** [Buy Me a Coffee](https://www.buymeacoffee.com/herculesmatheus) _(Accepts international credit cards, Apple Pay, and Google Pay)._
+
+### 🚀 Quick Start
+
+1. Navigate to the **Releases** tab of this repository and download the build for your operating system.
+2. Launch the application on a computer connected to the same network as your ATEM switcher.
+3. Enter your ATEM IP address to bind the hardware.
+4. Have your camera operators scan the on-screen QR Code, join the session, and select their camera from the dynamic grid interface.
 
 ---
 
-- npm run release : [MASTER] Limpa, compila e gera o .exe final.
-- npm run sync-version: Sincroniza a versão entre o core e o front.
-- npm run dev : Inicia o ambiente de desenvolvimento.
+## ⚖️ License / Licença
 
-5. REQUISITOS DE SISTEMA
-
----
-
-- Hardware: Switchers Blackmagic ATEM (Todos os modelos).
-- Rede: Conexão via cabo (Ethernet) recomendada para o PC
-  Admin e Wi-Fi estável (ou 4G/5G) para os celulares.
-- Cloud: Projeto configurado com PeerJS.
-
-6. GUIA DE CAMPO PARA O CINEGRAFISTA
-
----
-
-1. Escaneie o QR Code no painel do Admin.
-2. Clique em "ENTRAR NA SESSÃO" (Libera som e trava a tela).
-3. Escolha sua câmera no select (ex: CAM 01).
-4. Cores de Sinalização:
-   - VERMELHO : Você está no ar (PROGRAM).
-   - VERDE : Você é a próxima câmera (PREVIEW).
-   - CINZA : Standby / Fora do ar.
-
-============================================================
-🎥 TALLY LIGHT - ATEM BLACKMAGIC (v2.0.0)
-============================================================
+Distributed under the MIT License. See `LICENSE` for more information.  
+Distribuído sob a Licença MIT. Veja o arquivo `LICENSE` para mais detalhes.

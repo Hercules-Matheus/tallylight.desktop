@@ -1,0 +1,41 @@
+name: Build and Release Multi-platform
+
+on:
+  push:
+    tags:
+      - "v*" # Dispara o processo sempre que você fizer push de uma tag começando com 'v' (ex: v2.0.0)
+
+jobs:
+  release:
+    name: Build for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # Cria 3 ambientes virtuais independentes nos servidores do GitHub
+        os: [windows-latest, ubuntu-latest, macos-latest]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-on-version: "20" # Define a versão estável do Node
+          cache: "npm"
+
+      - name: Install Dependencies
+        run: npm ci # Instalação limpa baseada estritamente no package-lock.json
+
+      - name: Compile Application
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Token nativo do GitHub para autorizar a criação da release
+        run: |
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            npx electron-builder --win
+          elif [ "$RUNNER_OS" == "macOS" ]; then
+            npx electron-builder --mac
+          else
+            npx electron-builder --linux
+          fi
+        shell: bash
