@@ -14,7 +14,20 @@ Utilizando uma arquitetura descentralizada via **PeerJS (WebRTC)**, o sistema el
 
 Este software é desenvolvido de forma independente e distribuído gratuitamente. Se ele te ajudou a economizar no setup da sua transmissão ou trouxe praticidade para o seu estúdio/igreja, considere apoiar o desenvolvimento:
 
-- **Contribua via** [Buy Me a Coffee](https://www.buymeacoffee.com/herculesmatheus) _(Aceita cartões internacionais, Apple Pay e Google Pay)._
+<table align="center">
+  <tr>
+    <td align="center" width="50%" valign="top">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://www.buymeacoffee.com/herculesmatheus" width="180" alt="Buy Me A Coffee QR Code"/><br/>
+      <a href="https://www.buymeacoffee.com/herculesmatheus">☕ <b>Buy Me a Coffee</b></a><br/>
+      <i>(Cartões, Apple Pay, Google Pay)</i>
+    </td>
+    <td align="center" width="50%" valign="top">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=00020126860014BR.GOV.BCB.PIX013624515aa2-85b0-4fd8-bd3f-b2143368aca80224Thank you for supporting5204000053039865802BR5925HERCULES MATHEUS LIMA SIL6010PARNAMIRIM622605222cFPfPimEbDiQx6VG28cas63046759" width="180" alt="PIX QR Code"/><br/>
+      <b>📱 Pix Copia e Cola</b><br/>
+      <kbd>00020126860014BR.GOV.BCB.PIX013624515aa2-85b0-4fd8-bd3f-b2143368aca80224Thank you for supporting5204000053039865802BR5925HERCULES MATHEUS LIMA SIL6010PARNAMIRIM622605222cFPfPimEbDiQx6VG28cas63046759</kbd>
+    </td>
+  </tr>
+</table>
 
 ### 🚀 Como Usar
 
@@ -35,7 +48,20 @@ Powered by a decentralized **PeerJS (WebRTC)** architecture, the system operates
 
 This software is independently developed and distributed entirely for free. If it saved you hardware costs or upgraded your live production setup, please consider supporting the project:
 
-- **Support via** [Buy Me a Coffee](https://www.buymeacoffee.com/herculesmatheus) _(Accepts international credit cards, Apple Pay, and Google Pay)._
+<table align="center">
+  <tr>
+    <td align="center" width="50%" valign="top">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://www.buymeacoffee.com/herculesmatheus" width="180" alt="Buy Me A Coffee QR Code"/><br/>
+      <a href="https://www.buymeacoffee.com/herculesmatheus">☕ <b>Buy Me a Coffee</b></a><br/>
+      <i>(International Cards, Apple Pay, Google Pay)</i>
+    </td>
+    <td align="center" width="50%" valign="top">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=00020126860014BR.GOV.BCB.PIX013624515aa2-85b0-4fd8-bd3f-b2143368aca80224Thank you for supporting5204000053039865802BR5925HERCULES MATHEUS LIMA SIL6010PARNAMIRIM622605222cFPfPimEbDiQx6VG28cas63046759" width="180" alt="PIX QR Code"/><br/>
+      <b>📱 Brazilian Pix Code</b><br/>
+      <kbd>00020126860014BR.GOV.BCB.PIX013624515aa2-85b0-4fd8-bd3f-b2143368aca80224Thank you for supporting5204000053039865802BR5925HERCULES MATHEUS LIMA SIL6010PARNAMIRIM622605222cFPfPimEbDiQx6VG28cas63046759</kbd>
+    </td>
+  </tr>
+</table>
 
 ### 🚀 Quick Start
 
