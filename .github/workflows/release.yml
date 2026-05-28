@@ -3,7 +3,10 @@ name: Build and Release Multi-platform
 on:
   push:
     tags:
-      - "v*" # Dispara o processo sempre que você fizer push de uma tag começando com 'v' (ex: v2.0.0)
+      - 'v*'
+
+permissions:
+  contents: write
 
 jobs:
   release:
