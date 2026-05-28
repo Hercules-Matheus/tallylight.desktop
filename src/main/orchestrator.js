@@ -1,6 +1,8 @@
 const EventEmitter = require("events");
-const atem = require("./core/AtemManager");
-const store = require("./core/StateStore");
+const path = require("path");
+
+const atem = require(path.join(__dirname, "core", "AtemManager"));
+const store = require(path.join(__dirname, "core", "StateStore"));
 
 class Orchestrator extends EventEmitter {
   constructor() {

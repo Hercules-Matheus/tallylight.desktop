@@ -10,13 +10,13 @@ const path = require("path");
 const fs = require("fs");
 
 const isDev = !app.isPackaged;
-const envPath = isDev
-  ? path.join(__dirname, ".env")
-  : path.join(process.resourcesPath, ".env");
-require("dotenv").config({ path: envPath });
 
-const orchestrator = require("./src/main/Orchestrator");
-const store = require("./src/main/core/StateStore");
+const orchestrator = require(
+  path.join(__dirname, "src", "main", "orchestrator"),
+);
+const store = require(
+  path.join(__dirname, "src", "main", "core", "StateStore"),
+);
 
 let mainWindow = null;
 let tray = null;

@@ -1,5 +1,7 @@
 const { Atem } = require("atem-connection");
-const store = require("./StateStore");
+const path = require("path");
+
+const store = require(path.join(__dirname, "StateStore"));
 
 const TALLY_DEBOUNCE_MS = 300;
 
@@ -53,7 +55,7 @@ class AtemManager {
           (k) =>
             k.startsWith("video.mixEffects.0.programInput") ||
             k.startsWith("video.mixEffects.0.previewInput") ||
-            k.startsWith("video.mixEffects.0.transitionPosition")
+            k.startsWith("video.mixEffects.0.transitionPosition"),
         );
 
       if (!tallyChanged) return;
@@ -82,7 +84,9 @@ class AtemManager {
         this._tallyDebounceTimer = setTimeout(() => {
           this._tallyDebounceTimer = null;
           this._transitionInProgress = false;
-          console.log(`[ATEM] Dissolve parado → program:${program} preview:${preview}`);
+          console.log(
+            `[ATEM] Dissolve parado → program:${program} preview:${preview}`,
+          );
           store.setTally({ program, preview });
         }, 800);
       }
