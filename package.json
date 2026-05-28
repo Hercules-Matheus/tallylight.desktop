@@ -2,7 +2,7 @@
   "name": "tally-desktop",
   "version": "2.0.1",
   "description": "Motor do Tally Cloud",
-"author": {
+  "author": {
     "name": "Hercules Matheus",
     "email": "hmls235@gmail.com"
   },
@@ -17,7 +17,7 @@
     "release:mac": "npm run clean && electron-builder --mac"
   },
   "build": {
-    "appId": "com.tally",
+    "appId": "com.tallycloud.desktop",
     "productName": "Tally Light Cloud",
     "asar": true,
     "extraResources": [
@@ -28,7 +28,8 @@
         "portable",
         "nsis"
       ],
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.ico",
+      "artifactName": "TallyLightCloud-Windows.${ext}"
     },
     "linux": {
       "target": [
@@ -36,7 +37,8 @@
         "deb"
       ],
       "icon": "assets/icons",
-      "category": "Video"
+      "category": "Video",
+      "artifactName": "TallyLightCloud-Linux.${ext}"
     },
     "mac": {
       "target": [
@@ -44,7 +46,8 @@
         "zip"
       ],
       "icon": "assets/icon.icns",
-      "category": "public.app-category.video"
+      "category": "public.app-category.video",
+      "artifactName": "TallyLightCloud-Mac.${ext}"
     },
     "files": [
       "main.js",
