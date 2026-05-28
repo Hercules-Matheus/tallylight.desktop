@@ -2,7 +2,10 @@
   "name": "tally-desktop",
   "version": "2.0.1",
   "description": "Motor do Tally Cloud",
-  "author": "Hercules",
+"author": {
+    "name": "Hercules Matheus",
+    "email": "hmls235@gmail.com"
+  },
   "main": "main.js",
   "scripts": {
     "dev": "electron .",
