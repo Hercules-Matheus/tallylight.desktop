@@ -8,10 +8,6 @@ function safeOn(channel, callback) {
 }
 
 contextBridge.exposeInMainWorld("api", {
-  // --- Auth ---
-  login: (credentials) => ipcRenderer.invoke("auth:login", credentials),
-  resetPassword: (email) => ipcRenderer.invoke("auth:reset-password", email),
-
   // --- Config ---
   getConfig: () => ipcRenderer.invoke("get-config"),
 

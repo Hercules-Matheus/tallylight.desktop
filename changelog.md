@@ -1,9 +1,25 @@
 ============================================================
 CHANGELOG - TALLY CONTROL SYSTEM
 ============================================================
-Versão: 2.0.0
+Versão: 2.1.0
 Desenvolvedor: Hercules Matheus
 ============================================================
+
+## [2.1.0] - 2026-06-10
+
+### Added
+
+- New logs
+- New transition auto/manual dissolver maped to display both cams on air while transitioning
+
+### Changed
+
+- Solve the IP not autocompleting
+
+### Removed
+
+- Remove audio on switching cameras
+
 
 ## [2.0.0] - 2026-05-26
 

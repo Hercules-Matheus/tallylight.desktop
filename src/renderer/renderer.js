@@ -39,6 +39,23 @@ const AppNavigation = {
 // Iniciar Transmissão
 // ---------------------------------------------------------------------------
 
+document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    // Chama o preload que por sua vez chama o get-config do main.js
+    const config = await window.api.getConfig();
+
+    if (config && config.atemIp) {
+      const ipInput = document.getElementById("atem-ip");
+      if (ipInput) {
+        ipInput.value = config.atemIp;
+        console.log("[Renderer] IP do ATEM auto-preenchido:", config.atemIp);
+      }
+    }
+  } catch (err) {
+    console.error("[Renderer] Erro ao carregar configuração inicial:", err);
+  }
+});
+
 // Gera um código de sessão aleatório de 6 caracteres alfanuméricos.
 // Não precisa ser memorável — os cinegrafistas chegam via QR Code.
 function generateSessionCode() {
