@@ -3,7 +3,7 @@ name: Build and Release Multi-platform
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 permissions:
   contents: write
@@ -24,7 +24,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-on-version: "20" # Define a versão estável do Node
+          node-version: "24" # Define a versão estável do Node
           cache: "npm"
 
       - name: Install Dependencies
